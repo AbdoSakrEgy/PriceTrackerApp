@@ -1,0 +1,29 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const user_service_1 = require("./user.service");
+const auth_middleware_1 = require("../../middlewares/auth.middleware");
+const validation_middleware_1 = require("../../middlewares/validation.middleware");
+const user_validation_1 = require("./user.validation");
+const multer_upload_1 = require("../../utils/multer/multer.upload");
+const router = (0, express_1.Router)();
+const userServices = new user_service_1.UserServices();
+router.get("/user-profile", auth_middleware_1.auth, userServices.userProfile);
+router.get("/user-profile/:userId", auth_middleware_1.auth, userServices.userProfile);
+router.patch("/upload-profile-image", auth_middleware_1.auth, (0, multer_upload_1.multerUpload)({}).single("profileImage"), (0, validation_middleware_1.validation)(user_validation_1.uploadProfileImageSchema), userServices.uploadProfileImage);
+router.patch("/upload-profile-video", auth_middleware_1.auth, (0, multer_upload_1.multerUpload)({
+    sendedFileType: multer_upload_1.fileTypes.video,
+    storeIn: multer_upload_1.StoreInEnum.disk,
+}).single("profileVideo"), (0, validation_middleware_1.validation)(user_validation_1.uploadProfileVideoSchema), userServices.uploadProfileVideo);
+router.patch("/upload-avatar-image", auth_middleware_1.auth, (0, validation_middleware_1.validation)(user_validation_1.uploadAvatarImageSchema), userServices.uploadAvatarImage);
+router.patch("/upload-cover-images", auth_middleware_1.auth, (0, multer_upload_1.multerUpload)({}).array("coverImages", 3), 
+//! not working
+// validation(uploadCoverImagesSchema),
+userServices.uploadCoverImages);
+//! next api after use it from browser is generate => Error [ERR_HTTP_HEADERS_SENT]...
+router.get("/get-file/*path", userServices.getFile);
+router.get("/create-presignedUrl-toGetFile/*path", (0, validation_middleware_1.validation)(user_validation_1.createPresignedUrlToGetFileSchema), userServices.createPresignedUrlToGetFile);
+router.delete("/delete-file/*path", userServices.deleteFile);
+router.delete("/delete-multi-files", (0, validation_middleware_1.validation)(user_validation_1.deleteMultiFilesSchema), userServices.deleteMultiFiles);
+router.patch("/update-basic-info", auth_middleware_1.auth, (0, validation_middleware_1.validation)(user_validation_1.updateBasicInfoSchema), userServices.updateBasicInfo);
+exports.default = router;
