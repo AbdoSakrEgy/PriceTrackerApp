@@ -1,2 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const auth_middleware_1 = require("../../middlewares/auth.middleware");
+const product_service_1 = require("./product.service");
+const router = (0, express_1.Router)();
+const productServices = new product_service_1.ProductServices();
+router.post("/create-product", auth_middleware_1.auth, productServices.createProduct);
+router.post("/extract-product-data", auth_middleware_1.auth, productServices.extracktProductData);
+exports.default = router;
