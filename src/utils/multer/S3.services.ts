@@ -10,7 +10,7 @@ import {
 import { StoreInEnum } from "./multer.upload";
 import { createReadStream } from "fs";
 import { S3Config } from "./S3.config";
-import { ApplicationExpection } from "../Errors";
+import { ApplicationException } from "../Errors";
 import { nanoid } from "nanoid";
 import { Upload } from "@aws-sdk/lib-storage";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
@@ -32,7 +32,7 @@ export const uploadSingleSmallFileS3 = async ({
   const command = new PutObjectCommand({
     Bucket,
     ACL,
-    Key: `SocialApp/${dest}/${fileFromMulter.originalname}__${nanoid(15)}`,
+    Key: `ImaginoApp/${dest}/${fileFromMulter.originalname}__${nanoid(15)}`,
     Body:
       storeIn == StoreInEnum.memory
         ? fileFromMulter.buffer
@@ -41,7 +41,7 @@ export const uploadSingleSmallFileS3 = async ({
   });
   await S3Config().send(command);
   if (!command.input.Key) {
-    throw new ApplicationExpection("Error while uploading file", 500);
+    throw new ApplicationException("Error while uploading file", 500);
   }
   return command.input.Key;
 };
@@ -66,7 +66,7 @@ export const uploadSingleLargeFileS3 = async ({
     params: {
       Bucket,
       ACL,
-      Key: `SocialApp/${dest}/${fileFromMulter.originalname}__${nanoid(15)}`,
+      Key: `ImaginoApp/${dest}/${fileFromMulter.originalname}__${nanoid(15)}`,
       Body:
         storeIn == StoreInEnum.memory
           ? fileFromMulter.buffer
@@ -79,7 +79,7 @@ export const uploadSingleLargeFileS3 = async ({
   });
   const { Key } = await upload.done(); // Note: it is "Key" not "key"
   if (!Key) {
-    throw new ApplicationExpection("Error while uploading file", 500);
+    throw new ApplicationException("Error while uploading file", 500);
   }
   return Key;
 };
@@ -216,13 +216,13 @@ export const createPreSignedUrlToUploadFileS3 = async ({
   const command = new PutObjectCommand({
     Bucket,
     ACL,
-    Key: `SocialApp/${dest}/${fileName}__${nanoid(15)}`,
+    Key: `ImaginoApp/${dest}/${fileName}__${nanoid(15)}`,
     ContentType,
   });
 
   const url = await getSignedUrl(S3Config(), command, { expiresIn });
   if (!url || !command.input.Key) {
-    throw new ApplicationExpection("Failed to generate preSignedURL", 500);
+    throw new ApplicationException("Failed to generate preSignedURL", 500);
   }
   return { url, Key: command.input.Key };
 };
@@ -250,7 +250,7 @@ export const createPresignedUrlToGetFileS3 = async ({
   });
   const url = await getSignedUrl(S3Config(), command, { expiresIn });
   if (!url) {
-    throw new ApplicationExpection("Failed to generate preSignedURL", 500);
+    throw new ApplicationException("Failed to generate preSignedURL", 500);
   }
   return url;
 };

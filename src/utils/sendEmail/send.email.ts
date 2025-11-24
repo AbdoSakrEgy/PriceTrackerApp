@@ -1,4 +1,4 @@
-import { createTransport, Transport } from "nodemailer";
+import { createTransport } from "nodemailer";
 
 export const sendEmail = async ({
   to,
@@ -10,7 +10,7 @@ export const sendEmail = async ({
   html: string;
 }) => {
   const transporter = createTransport({
-    host: "smtp.ethereal.email",
+    host: process.env.HOST as string,
     port: 465,
     secure: true,
     service: "gmail",
@@ -24,7 +24,7 @@ export const sendEmail = async ({
   });
   try {
     const info = await transporter.sendMail({
-      from: `"SocialApp" <${process.env.SENDER_EMAIL}>`, // sender address
+      from: `"ImaginoApp" <${process.env.SENDER_EMAIL}>`, // sender address
       to, // list of receivers
       subject, // Subject line
       html, // html body

@@ -9,9 +9,9 @@ const validation = (shcema) => {
             ...req.params,
             ...req.query,
             // express.json() can't see or parssing fields that has files, so we create this field and put data in it manually
-            profileImage: req.file,
-            attachment: req.file,
-            attachments: req.files,
+            // profileImage: req.file,
+            // attachment: req.file,
+            // attachments: req.files,
         };
         const result = shcema.safeParse(data);
         if (!result.success) {

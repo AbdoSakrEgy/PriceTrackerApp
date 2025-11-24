@@ -3,11 +3,11 @@ import path from "path";
 import dotenv from "dotenv";
 const app = express();
 dotenv.config({
-  path: path.resolve("./src/.env"),
+  path: path.resolve("./src/config/.env"),
 });
 import router from "./routes";
 import { connectDB } from "./DB/db.connection";
-import { ApplicationExpection, IError } from "./utils/Errors";
+import { ApplicationException, IError } from "./utils/Errors";
 import cors from "cors";
 
 var whitelist = [
@@ -21,7 +21,7 @@ var corsOptions = {
     if (whitelist.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      callback(new ApplicationExpection("Not allowed by CORS", 401));
+      callback(new ApplicationException("Not allowed by CORS", 401));
     }
   },
 };

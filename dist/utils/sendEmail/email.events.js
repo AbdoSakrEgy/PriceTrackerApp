@@ -11,7 +11,7 @@ exports.emailEvent.on("sendEmail", async (emailStructure) => {
         html: emailStructure.html,
     });
     // if (!isEmailSended) {
-    //   throw new ApplicationExpection("Error while sending email", 400);
+    //   throw new ApplicationException ("Error while sending email", 400);
     // }
     // Using EventEmmitter to handle email sending is so bad
     // 1- The error is thrown inside an EventEmitter listener, which runs outside Express’s request/response cycle

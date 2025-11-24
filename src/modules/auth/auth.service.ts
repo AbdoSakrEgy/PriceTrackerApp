@@ -1,6 +1,5 @@
+import { UserModel } from "./../user/user.model";
 import { NextFunction, Request, Response } from "express";
-import { DBRepo } from "../../DB/repos/db.repo";
-import { IUser, UserModel } from "../user/user.model";
 import {
   activeDeactive2FADTO,
   changePasswordDTO,
@@ -13,7 +12,7 @@ import {
   updateEmaiDTO,
   updatePasswordDTO,
 } from "./auth.dto";
-import { ApplicationExpection, NotValidEmail } from "../../utils/Errors";
+import { ApplicationException, NotValidEmail } from "../../utils/Errors";
 import { HydratedDocument } from "mongoose";
 import { template } from "../../utils/sendEmail/generateHTML";
 import { createJwt } from "../../utils/jwt";
@@ -21,53 +20,11 @@ import { createOtp } from "../../utils/createOtp";
 import { successHandler } from "../../utils/successHandler";
 import { compare } from "../../utils/bcrypt";
 import { sendEmail } from "../../utils/sendEmail/send.email";
-import { decodeToken, tokenTypes } from "../../utils/decodeToken";
-import { UserRepo } from "../user/user.repo";
-
-interface IAuthServcies {
-  register(req: Request, res: Response, next: NextFunction): Promise<Response>;
-  login(req: Request, res: Response, next: NextFunction): Promise<Response>;
-  refreshToken(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<Response>;
-  confirmEmail(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<Response>;
-  updateEmail(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<Response>;
-  resendEmailOtp(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<Response>;
-  updatePassword(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<Response>;
-  forgetPassword(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<Response>;
-  changePassword(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<Response>;
-  logout(req: Request, res: Response, next: NextFunction): Promise<Response>;
-}
+import { decodeToken, TokenTypesEnum } from "../../utils/decodeToken";
+import { IAuthServcies } from "../../types/auth.modules.types";
+import { IUser } from "../../types/user.module.types";
 
 export class AuthServices implements IAuthServcies {
-  private userRepo = new UserRepo();
-
   constructor() {}
 
   // ============================ register ============================
@@ -78,19 +35,15 @@ export class AuthServices implements IAuthServcies {
   ): Promise<Response> => {
     const { firstName, lastName, email, password }: registerDTO = req.body;
     // step: check user existence
-    const isUserExist = await this.userRepo.findOne({
-      filter: { email },
-      options: { lean: true },
-    });
+    const isUserExist = await UserModel.findOne({ email });
     if (isUserExist) {
       throw new NotValidEmail("User already exist");
     }
     // step: send email otp
     const otpCode = createOtp();
-
     const { isEmailSended, info } = await sendEmail({
       to: email,
-      subject: "SocialApp",
+      subject: "ImaginoApp",
       html: template({
         otpCode,
         receiverName: firstName,
@@ -98,23 +51,21 @@ export class AuthServices implements IAuthServcies {
       }),
     });
     if (!isEmailSended) {
-      throw new ApplicationExpection("Error while sending email", 400);
+      throw new ApplicationException("Error while sending email", 400);
     }
     // step: create new user
-    const user: HydratedDocument<IUser> = await this.userRepo.create({
-      data: {
-        firstName,
-        lastName,
-        email,
-        password,
-        emailOtp: {
-          otp: otpCode,
-          expiresIn: new Date(Date.now() + 5 * 60 * 1000),
-        },
+    const user: HydratedDocument<IUser> = await UserModel.create({
+      firstName,
+      lastName,
+      email,
+      password,
+      emailOtp: {
+        otp: otpCode,
+        expiredAt: new Date(Date.now() + 5 * 60 * 1000),
       },
     });
     if (!user) {
-      throw new ApplicationExpection("Creation failed", 500);
+      throw new ApplicationException("Creation failed", 500);
     }
     // step: create token
     const accessToken = createJwt(
@@ -148,13 +99,13 @@ export class AuthServices implements IAuthServcies {
   ): Promise<Response> => {
     const { email, password }: loginDTO = req.body;
     // step: check credentials
-    const isUserExist = await this.userRepo.findOne({ filter: { email } });
+    const isUserExist = await UserModel.findOne({ email });
     if (!isUserExist) {
-      throw new ApplicationExpection("Invalid credentials", 404);
+      throw new ApplicationException("Invalid credentials", 404);
     }
     const user = isUserExist;
     if (!(await compare(password, user.password))) {
-      throw new ApplicationExpection("Invalid credentials", 401);
+      throw new ApplicationException("Invalid credentials", 401);
     }
     // step: check is 2FA active
     if (user.is2FAActive) {
@@ -162,7 +113,7 @@ export class AuthServices implements IAuthServcies {
       const otpCode = createOtp();
       const { isEmailSended, info } = await sendEmail({
         to: user.email,
-        subject: "SocialApp",
+        subject: "ImaginoApp",
         html: template({
           otpCode,
           receiverName: user.firstName,
@@ -170,20 +121,20 @@ export class AuthServices implements IAuthServcies {
         }),
       });
       if (!isEmailSended) {
-        throw new ApplicationExpection("Error while sending email", 400);
+        throw new ApplicationException("Error while sending email", 400);
       }
       // ->step: update user
-      const updatedUser = await this.userRepo.findOneAndUpdate({
-        filter: { _id: user._id },
-        data: {
+      const updatedUser = await UserModel.findOneAndUpdate(
+        { _id: user._id },
+        {
           $set: {
             otp2FA: {
               otp: otpCode,
-              expiresIn: new Date(Date.now() + 5 * 60 * 1000),
+              expiredAt: new Date(Date.now() + 5 * 60 * 1000),
             },
           },
-        },
-      });
+        }
+      );
       return successHandler({
         res,
         message: "OTP sended to your email pleaze confirm it to login",
@@ -222,12 +173,12 @@ export class AuthServices implements IAuthServcies {
     const authorization = req.headers.authorization;
     // step: check authorization
     if (!authorization) {
-      throw new ApplicationExpection("Authorization undefiend", 400);
+      throw new ApplicationException("Authorization undefiend", 400);
     }
     // step: decode authorization
     const { user, payload } = await decodeToken({
       authorization,
-      tokenType: tokenTypes.refresh,
+      tokenType: TokenTypesEnum.refresh,
     });
     // step: create accessToken
     const newPayload = {
@@ -255,24 +206,24 @@ export class AuthServices implements IAuthServcies {
   ): Promise<Response> => {
     const { email, firstOtp, secondOtp }: confirmEmaiDTO = req.body;
     // step: check user exitance
-    const user = await this.userRepo.findOne({ filter: { email } });
+    const user = await UserModel.findOne({ email });
     if (!user) {
-      throw new ApplicationExpection("User not found", 400);
+      throw new ApplicationException("User not found", 400);
     }
     // step: check emailOtp
     if (!(await compare(firstOtp, user.emailOtp.otp))) {
       return successHandler({ res, message: "Invalid otp", status: 400 });
     }
-    if (user.emailOtp.expiresIn < new Date(Date.now())) {
+    if (user.emailOtp.expiredAt < new Date(Date.now())) {
       return successHandler({ res, message: "otp expired", status: 400 });
     }
     // step: case 1 email not confrimed (confirm first email)
     if (!user.emailConfirmed) {
       // step: confirm email
-      const updatedUser = await this.userRepo.findOneAndUpdate({
-        filter: { email: user.email },
-        data: { $set: { emailConfirmed: true } },
-      });
+      const updatedUser = await UserModel.findOneAndUpdate(
+        { email: user.email },
+        { $set: { emailConfirmed: new Date() } }
+      );
       return successHandler({ res, message: "Email confirmed successfully" });
     }
     // step: case 2 email confrimed (confirm first and second email)
@@ -293,7 +244,7 @@ export class AuthServices implements IAuthServcies {
         status: 400,
       });
     }
-    if (user.newEmailOtp.expiresIn < new Date(Date.now())) {
+    if (user.newEmailOtp.expiredAt < new Date(Date.now())) {
       return successHandler({
         res,
         message: "otp expired for second email",
@@ -302,10 +253,10 @@ export class AuthServices implements IAuthServcies {
     }
     // step: confirm email
     const newEmail = user.newEmail;
-    const updatedUser = await this.userRepo.findOneAndUpdate({
-      filter: { email: user.email },
-      data: { $set: { email: newEmail } },
-    });
+    const updatedUser = await UserModel.findOneAndUpdate(
+      { email: user.email },
+      { $set: { email: newEmail } }
+    );
     return successHandler({
       res,
       message: "New email confirmed successfully",
@@ -332,7 +283,7 @@ export class AuthServices implements IAuthServcies {
     const otpCodeForCurrentEmail = createOtp();
     const { isEmailSended } = await sendEmail({
       to: user.email,
-      subject: "SocialApp",
+      subject: "ImaginoApp",
       html: template({
         otpCode: otpCodeForCurrentEmail,
         receiverName: user.firstName,
@@ -350,7 +301,7 @@ export class AuthServices implements IAuthServcies {
     const otpCodeForNewEmail = createOtp();
     const resultOfSendEmail = await sendEmail({
       to: newEmail,
-      subject: "SocialApp",
+      subject: "ImaginoApp",
       html: template({
         otpCode: otpCodeForNewEmail,
         receiverName: user.firstName,
@@ -365,18 +316,28 @@ export class AuthServices implements IAuthServcies {
       });
     }
     // step: save emailOtp, newEmail and newEmailOtp
-    const updatedUser = await this.userRepo.findOneAndUpdate({
-      filter: { _id: user._id },
-      data: {
+    const updatedUser = await UserModel.findOneAndUpdate(
+      { _id: user._id },
+      {
         $set: {
-          "emailOtp.otp": otpCodeForCurrentEmail,
-          "emialOtp.expiresIn": new Date(Date.now() + 5 * 60 * 1000),
+          emailOtp: {
+            otp: otpCodeForCurrentEmail,
+            expiredAt: new Date(Date.now() + 5 * 60 * 1000),
+          },
           newEmail,
-          "newEmailOtp.otp": otpCodeForNewEmail,
-          "newEmailOtp.expiresIn": new Date(Date.now() + 5 * 60 * 1000),
+          newEmailOtp: {
+            otp: otpCodeForNewEmail,
+            expiredAt: new Date(Date.now() + 5 * 60 * 1000),
+          },
         },
       },
-    });
+      {
+        new: true,
+        runValidators: true,
+        context: "query",
+      }
+    );
+
     return successHandler({
       res,
       message:
@@ -392,21 +353,20 @@ export class AuthServices implements IAuthServcies {
   ): Promise<Response> => {
     const { email }: resendEmailOtpDTO = req.body;
     // step: check email existence
-    const isUserExist = await this.userRepo.findOne({ filter: { email } });
+    const isUserExist = await UserModel.findOne({ email });
     if (!isUserExist) {
-      throw new ApplicationExpection("User not found", 404);
+      throw new ApplicationException("User not found", 404);
     }
     const user = isUserExist;
     // step: check if email otp not expired yet
-    if (user.emailOtp?.expiresIn > new Date(Date.now())) {
-      throw new ApplicationExpection("Your OTP not expired yet", 400);
+    if (user.emailOtp?.expiredAt > new Date(Date.now())) {
+      throw new ApplicationException("Your OTP not expired yet", 400);
     }
     // step: send email otp
     const otpCode = createOtp();
-    // const otpCode = "555";
     const { isEmailSended, info } = await sendEmail({
       to: email,
-      subject: "SocialApp",
+      subject: "ImaginoApp",
       html: template({
         otpCode,
         receiverName: user.firstName,
@@ -414,20 +374,25 @@ export class AuthServices implements IAuthServcies {
       }),
     });
     if (!isEmailSended) {
-      throw new ApplicationExpection("Error while sending email", 400);
+      throw new ApplicationException("Error while sending email", 400);
     }
     // step: update emailOtp
-    const updatedUset = await this.userRepo.findOneAndUpdate({
-      filter: { email: user.email },
-      data: {
+    const updatedUset = await UserModel.findOneAndUpdate(
+      { email: user.email },
+      {
         $set: {
           emailOtp: {
             otp: otpCode,
-            expiresIn: new Date(Date.now() + 5 * 60 * 1000),
+            expiredAt: new Date(Date.now() + 5 * 60 * 1000),
           },
         },
       },
-    });
+      {
+        new: true,
+        runValidators: true,
+        context: "query",
+      }
+    );
     return successHandler({ res, message: "OTP sended successfully" });
   };
 
@@ -441,25 +406,30 @@ export class AuthServices implements IAuthServcies {
     const { currentPassword, newPassword }: updatePasswordDTO = req.body;
     // step: check password correction
     if (!(await compare(currentPassword, user.password))) {
-      throw new ApplicationExpection("Invalid credentials", 401);
+      throw new ApplicationException("Invalid credentials", 401);
     }
     // step: check newPassword not equal currentPassword
     if (await compare(newPassword, user.password)) {
-      throw new ApplicationExpection(
+      throw new ApplicationException(
         "You can not make new password equal to old password",
         400
       );
     }
     // step: update password and credentialsChangedAt
-    const updatedUser = await this.userRepo.findOneAndUpdate({
-      filter: { _id: user._id },
-      data: {
+    const updatedUser = await UserModel.findOneAndUpdate(
+      { _id: user._id },
+      {
         $set: {
           password: newPassword,
           credentialsChangedAt: new Date(Date.now()),
         },
       },
-    });
+      {
+        new: true,
+        runValidators: true,
+        context: "query",
+      }
+    );
     return successHandler({
       res,
       message: "Password updated successfully, please login again",
@@ -474,14 +444,14 @@ export class AuthServices implements IAuthServcies {
   ): Promise<Response> => {
     const { email }: forgetPasswordDTO = req.body;
     // step: check email existence
-    const isUserExist = await this.userRepo.findOne({ filter: { email } });
+    const isUserExist = await UserModel.findOne({ email });
     if (!isUserExist) {
-      throw new ApplicationExpection("User not found", 404);
+      throw new ApplicationException("User not found", 404);
     }
     const user = isUserExist;
     // step: check if password otp not expired yet
-    if (user.passwordOtp?.expiresIn > new Date(Date.now())) {
-      throw new ApplicationExpection("Your OTP not expired yet", 400);
+    if (user.passwordOtp?.expiredAt > new Date(Date.now())) {
+      throw new ApplicationException("Your OTP not expired yet", 400);
     }
     // step: send email otp
     const otpCode = createOtp();
@@ -496,18 +466,25 @@ export class AuthServices implements IAuthServcies {
       }),
     });
     if (!isEmailSended) {
-      throw new ApplicationExpection("Error while sending email", 400);
+      throw new ApplicationException("Error while sending email", 400);
     }
     // step: update passwordOtp
-    const updatedUser = await this.userRepo.findOneAndUpdate({
-      filter: { _id: user._id },
-      data: {
+    const updatedUser = await UserModel.findOneAndUpdate(
+      { _id: user._id },
+      {
         $set: {
-          "passwordOtp.otp": otpCode,
-          "passwordOtp.expiresIn": new Date(Date.now() + 5 * 60 * 1000),
+          passwordOtp: {
+            otp: otpCode,
+            expiredAt: new Date(Date.now() + 5 * 60 * 1000),
+          },
         },
       },
-    });
+      {
+        new: true,
+        runValidators: true,
+        context: "query",
+      }
+    );
     return successHandler({
       res,
       message: "OTP sended to email, please use it to restart your password",
@@ -522,24 +499,29 @@ export class AuthServices implements IAuthServcies {
   ): Promise<Response> => {
     const { email, otp, newPassword }: changePasswordDTO = req.body;
     // step: check email existence
-    const isUserExist = await this.userRepo.findOne({ filter: { email } });
+    const isUserExist = await UserModel.findOne({ email });
     if (!isUserExist) {
-      throw new ApplicationExpection("User not found", 404);
+      throw new ApplicationException("User not found", 404);
     }
     const user = isUserExist;
     // step: check otp
     if (!(await compare(otp, user.passwordOtp.otp))) {
-      throw new ApplicationExpection("Invalid OTP", 400);
+      throw new ApplicationException("Invalid OTP", 400);
     }
     // step: change password
-    const updatedUser = await this.userRepo.findOneAndUpdate({
-      filter: { email },
-      data: {
+    const updatedUser = await UserModel.findOneAndUpdate(
+      { email },
+      {
         $set: {
           password: newPassword,
         },
       },
-    });
+      {
+        new: true,
+        runValidators: true,
+        context: "query",
+      }
+    );
     return successHandler({
       res,
       message: "Password changed successfully, You have to login",
@@ -557,7 +539,7 @@ export class AuthServices implements IAuthServcies {
     const otpCode = createOtp();
     const { isEmailSended, info } = await sendEmail({
       to: user.email,
-      subject: "SocialApp",
+      subject: "ImaginoApp",
       html: template({
         otpCode,
         receiverName: user.firstName,
@@ -565,20 +547,25 @@ export class AuthServices implements IAuthServcies {
       }),
     });
     if (!isEmailSended) {
-      throw new ApplicationExpection("Error while sending email", 400);
+      throw new ApplicationException("Error while sending email", 400);
     }
     // step: save OTP
-    const updatedUser = await this.userRepo.findOneAndUpdate({
-      filter: { _id: user._id },
-      data: {
+    const updatedUser = await UserModel.findOneAndUpdate(
+      { _id: user._id },
+      {
         $set: {
           otp2FA: {
             otp: otpCode,
-            expiresIn: new Date(Date.now() + 5 * 60 * 1000),
+            expiredAt: new Date(Date.now() + 5 * 60 * 1000),
           },
         },
       },
-    });
+      {
+        new: true,
+        runValidators: true,
+        context: "query",
+      }
+    );
     return successHandler({
       res,
       message: "OTP sended to your email plz confirm it to active 2FA",
@@ -593,30 +580,40 @@ export class AuthServices implements IAuthServcies {
   ): Promise<Response> => {
     const user = res.locals.user;
     const otp = (req.body as activeDeactive2FADTO)?.otp;
+    console.log({ otp });
     // step: check otp existence
     if (!otp) {
-      const updatedUser = await this.userRepo.findOneAndUpdate({
-        filter: { _id: user._id },
-        data: { $set: { is2FAActive: false } },
-      });
+      const updatedUser = await UserModel.findOneAndUpdate(
+        { _id: user._id },
+        { $set: { is2FAActive: false } },
+        {
+          new: true,
+          runValidators: true,
+          context: "query",
+        }
+      );
       return successHandler({ res, message: "2FA disabled successfully" });
     }
     // step: check otp value
     if (!user?.otp2FA?.otp) {
-      throw new ApplicationExpection("OTP not correct", 400);
+      throw new ApplicationException("OTP not correct", 400);
     }
     if (!(await compare(otp, user?.otp2FA?.otp))) {
-      throw new ApplicationExpection("OTP not correct", 400);
+      throw new ApplicationException("OTP not correct", 400);
     }
-    if (user?.otp2FA?.expiresIn < new Date(Date.now())) {
-      throw new ApplicationExpection("OTP expired", 400);
+    if (user?.otp2FA?.expiredAt < new Date(Date.now())) {
+      throw new ApplicationException("OTP expired", 400);
     }
     // step: update 2fa
-    console.log("object");
-    const updatedUser = await this.userRepo.findOneAndUpdate({
-      filter: { _id: user._id },
-      data: { $set: { is2FAActive: true } },
-    });
+    const updatedUser = await UserModel.findOneAndUpdate(
+      { _id: user._id },
+      { $set: { is2FAActive: true } },
+      {
+        new: true,
+        runValidators: true,
+        context: "query",
+      }
+    );
     return successHandler({ res, message: "2FA enabled successfully" });
   };
 
@@ -627,13 +624,13 @@ export class AuthServices implements IAuthServcies {
     next: NextFunction
   ): Promise<Response> => {
     const { userId, otp } = req.body as check2FAOTPADTO;
-    const user = await this.userRepo.findOne({ filter: { _id: userId } });
+    const user = await UserModel.findOne({ _id: userId });
     // step: check OTP
     if (!user?.otp2FA?.otp) {
-      throw new ApplicationExpection("Invalid credentials", 400);
+      throw new ApplicationException("Invalid credentials", 400);
     }
     if (!(await compare(otp, user?.otp2FA?.otp))) {
-      throw new ApplicationExpection("Invalid credentials", 400);
+      throw new ApplicationException("Invalid credentials", 400);
     }
     // step: create token
     const accessToken = createJwt(
@@ -667,14 +664,19 @@ export class AuthServices implements IAuthServcies {
   ): Promise<Response> => {
     const user = res.locals.user;
     // step: change credentialsChangedAt
-    const updatedUser = await this.userRepo.findOneAndUpdate({
-      filter: { _id: user._id },
-      data: {
+    const updatedUser = await UserModel.findOneAndUpdate(
+      { _id: user._id },
+      {
         $set: {
           credentialsChangedAt: new Date(Date.now()),
         },
       },
-    });
+      {
+        new: true,
+        runValidators: true,
+        context: "query",
+      }
+    );
     return successHandler({
       res,
       message: "Logged out successfully",

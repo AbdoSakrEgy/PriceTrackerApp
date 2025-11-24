@@ -1,16 +1,11 @@
-import { IUser } from "./user.model";
+import { UserModel } from "./user.model";
 import { successHandler } from "../../utils/successHandler";
 import { NextFunction, Request, Response } from "express";
-import { UserRepo } from "./user.repo";
 import {
   deleteMultiFilesDTO,
   createPresignedUrlToGetFileDTO,
   updateBasicInfoDTO,
   uploadAvatarImageDTO,
-  sendFriendRequestDTO,
-  acceptFriendRequestDTO,
-  blockUserDTO,
-  deleteFriendRequestDTO,
 } from "./user.dto";
 import {
   createPreSignedUrlToUploadFileS3,
@@ -24,66 +19,30 @@ import {
 } from "../../utils/multer/S3.services";
 import { HydratedDocument } from "mongoose";
 import { StoreInEnum } from "../../utils/multer/multer.upload";
-import { ApplicationExpection } from "../../utils/Errors";
+import { ApplicationException } from "../../utils/Errors";
 import { promisify } from "util";
 import { pipeline } from "stream";
+import { IUser, IUserServices } from "../../types/user.module.types";
 const createS3WriteStreamPipe = promisify(pipeline);
-interface IUserServices {
-  userProfile(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<Response>;
-  uploadProfileImage(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<Response>;
-  uploadProfileVideo(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<Response>;
-  uploadAvatarImage(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<Response>;
-  uploadCoverImages(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<Response>;
-  getFile(req: Request, res: Response, next: NextFunction): Promise<void>;
-  createPresignedUrlToGetFile(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<Response>;
-  deleteFile(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<Response>;
-  deleteMultiFiles(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<Response>;
-  updateBasicInfo(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<Response>;
-}
 
 export class UserServices implements IUserServices {
-  private userRepo = new UserRepo();
+  private userModel = UserModel;
 
   constructor() {}
   // ============================ userProfile ============================
-  userProfile = (req: Request, res: Response, next: NextFunction): any => {
-    return;
+  userProfile = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response> => {
+    let user = res.locals.user;
+    let userId = req.params?.userId;
+    // step: if userId existence
+    if (userId) {
+      user = await this.userModel.findOne({ filter: { _id: userId } });
+    }
+    userId = user._id;
+    return successHandler({ res, result: { user } });
   };
 
   // ============================ uploadProfileImage ============================
@@ -99,7 +58,7 @@ export class UserServices implements IUserServices {
       fileFromMulter: req.file as Express.Multer.File,
     });
     // step: update user
-    const updatedUser = await this.userRepo.findOneAndUpdate({
+    const updatedUser = await this.userModel.findOneAndUpdate({
       filter: { _id: user._id },
       data: { $set: { profileImage: Key } },
     });
@@ -107,83 +66,6 @@ export class UserServices implements IUserServices {
       res,
       message: "Profile image uploaded successfully",
       result: { Key },
-    });
-  };
-
-  // ============================ uploadProfileVideo ============================
-  uploadProfileVideo = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<Response> => {
-    const user = res.locals.user as HydratedDocument<IUser>;
-    // step: upload video
-    const Key = await uploadSingleLargeFileS3({
-      dest: `users/${user._id}/profileVideo`,
-      fileFromMulter: req.file as Express.Multer.File,
-      storeIn: StoreInEnum.disk,
-    });
-    // step: update user
-    const updatedUser = await this.userRepo.findOneAndUpdate({
-      filter: { _id: user._id },
-      data: { $set: { profileVideo: Key } },
-    });
-    return successHandler({
-      res,
-      message: "Profile video uploaded successfully",
-      result: { Key },
-    });
-  };
-
-  // ============================ uploadAvatarImage ============================
-  uploadAvatarImage = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<Response> => {
-    const user = res.locals.user as HydratedDocument<IUser>;
-    const { fileName, fileType }: uploadAvatarImageDTO = req.body;
-    // step: upload image
-    const { url, Key } = await createPreSignedUrlToUploadFileS3({
-      dest: `users/${user._id}/avatarImage`,
-      fileName,
-      ContentType: fileType,
-    });
-    // step: update user
-    const updatedUser = await this.userRepo.findOneAndUpdate({
-      filter: { _id: user._id },
-      data: { $set: { avatarImage: Key } },
-    });
-    return successHandler({
-      res,
-      message:
-        "Use url to upload your image by using it as API with PUT method",
-      result: { url, Key },
-    });
-  };
-
-  // ============================ uploadCoverImages ============================
-  uploadCoverImages = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<Response> => {
-    console.log(req.body);
-    const user = res.locals.user;
-    // step: upload images
-    const Keys = await uploadMultiFilesS3({
-      filesFromMulter: req.files as Express.Multer.File[],
-      dest: `users/${user._id}/coverImages`,
-    });
-    // step: update user
-    const updatedUser = await this.userRepo.findOneAndUpdate({
-      filter: { _id: user._id },
-      data: { $set: { coverImages: Keys } },
-    });
-    return successHandler({
-      res,
-      message: "Cover images uploaded successfully",
-      result: { Keys },
     });
   };
 
@@ -198,7 +80,7 @@ export class UserServices implements IUserServices {
     const Key = path.join("/");
     const fileObject = await getFileS3({ Key });
     if (!fileObject?.Body) {
-      throw new ApplicationExpection("Failed to get file", 400);
+      throw new ApplicationException("Failed to get file", 400);
     }
     res.setHeader(
       "Content-Type",
@@ -275,7 +157,7 @@ export class UserServices implements IUserServices {
     const { firstName, lastName, age, gender, phone }: updateBasicInfoDTO =
       req.body;
     // step: update basic info
-    const updatedUser = await this.userRepo.findOneAndUpdate({
+    const updatedUser = await this.userModel.findOneAndUpdate({
       filter: { _id: user._id },
       data: { $set: { firstName, lastName, age, gender, phone } },
     });

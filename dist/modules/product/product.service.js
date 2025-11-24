@@ -3,7 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ProductServices = void 0;
 const product_repo_1 = require("./product.repo");
 const successHandler_1 = require("../../utils/successHandler");
-const aiExtractor_1 = require("../../utils/ai/aiExtractor");
+const amazon_extractor_1 = require("../../utils/extractors/amazon.extractor");
 class ProductServices {
     productRepo = new product_repo_1.ProductRepo();
     constructor() { }
@@ -37,7 +37,7 @@ class ProductServices {
                 message: "URL is required",
             });
         }
-        const productData = await (0, aiExtractor_1.extractDataFromUrl)(url);
+        const productData = await (0, amazon_extractor_1.amazonExtractor)(url);
         return (0, successHandler_1.successHandler)({
             res,
             message: "Product data extracted successfully",

@@ -8,7 +8,7 @@ const path_1 = __importDefault(require("path"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const app = (0, express_1.default)();
 dotenv_1.default.config({
-    path: path_1.default.resolve("./src/.env"),
+    path: path_1.default.resolve("./src/config/.env"),
 });
 const routes_1 = __importDefault(require("./routes"));
 const db_connection_1 = require("./DB/db.connection");
@@ -26,7 +26,7 @@ var corsOptions = {
             callback(null, true);
         }
         else {
-            callback(new Errors_1.ApplicationExpection("Not allowed by CORS", 401));
+            callback(new Errors_1.ApplicationException("Not allowed by CORS", 401));
         }
     },
 };

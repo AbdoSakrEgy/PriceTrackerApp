@@ -14,7 +14,7 @@ const uploadSingleSmallFileS3 = async ({ Bucket = process.env.BUCKET_NAME, ACL =
     const command = new client_s3_1.PutObjectCommand({
         Bucket,
         ACL,
-        Key: `SocialApp/${dest}/${fileFromMulter.originalname}__${(0, nanoid_1.nanoid)(15)}`,
+        Key: `ImaginoApp/${dest}/${fileFromMulter.originalname}__${(0, nanoid_1.nanoid)(15)}`,
         Body: storeIn == multer_upload_1.StoreInEnum.memory
             ? fileFromMulter.buffer
             : (0, fs_1.createReadStream)(fileFromMulter.path),
@@ -22,7 +22,7 @@ const uploadSingleSmallFileS3 = async ({ Bucket = process.env.BUCKET_NAME, ACL =
     });
     await (0, S3_config_1.S3Config)().send(command);
     if (!command.input.Key) {
-        throw new Errors_1.ApplicationExpection("Error while uploading file", 500);
+        throw new Errors_1.ApplicationException("Error while uploading file", 500);
     }
     return command.input.Key;
 };
@@ -35,7 +35,7 @@ const uploadSingleLargeFileS3 = async ({ Bucket = process.env.BUCKET_NAME, ACL =
         params: {
             Bucket,
             ACL,
-            Key: `SocialApp/${dest}/${fileFromMulter.originalname}__${(0, nanoid_1.nanoid)(15)}`,
+            Key: `ImaginoApp/${dest}/${fileFromMulter.originalname}__${(0, nanoid_1.nanoid)(15)}`,
             Body: storeIn == multer_upload_1.StoreInEnum.memory
                 ? fileFromMulter.buffer
                 : (0, fs_1.createReadStream)(fileFromMulter.path),
@@ -47,7 +47,7 @@ const uploadSingleLargeFileS3 = async ({ Bucket = process.env.BUCKET_NAME, ACL =
     });
     const { Key } = await upload.done(); // Note: it is "Key" not "key"
     if (!Key) {
-        throw new Errors_1.ApplicationExpection("Error while uploading file", 500);
+        throw new Errors_1.ApplicationException("Error while uploading file", 500);
     }
     return Key;
 };
@@ -138,12 +138,12 @@ const createPreSignedUrlToUploadFileS3 = async ({ Bucket = process.env.BUCKET_NA
     const command = new client_s3_1.PutObjectCommand({
         Bucket,
         ACL,
-        Key: `SocialApp/${dest}/${fileName}__${(0, nanoid_1.nanoid)(15)}`,
+        Key: `ImaginoApp/${dest}/${fileName}__${(0, nanoid_1.nanoid)(15)}`,
         ContentType,
     });
     const url = await (0, s3_request_presigner_1.getSignedUrl)((0, S3_config_1.S3Config)(), command, { expiresIn });
     if (!url || !command.input.Key) {
-        throw new Errors_1.ApplicationExpection("Failed to generate preSignedURL", 500);
+        throw new Errors_1.ApplicationException("Failed to generate preSignedURL", 500);
     }
     return { url, Key: command.input.Key };
 };
@@ -159,7 +159,7 @@ const createPresignedUrlToGetFileS3 = async ({ Bucket = process.env.BUCKET_NAME,
     });
     const url = await (0, s3_request_presigner_1.getSignedUrl)((0, S3_config_1.S3Config)(), command, { expiresIn });
     if (!url) {
-        throw new Errors_1.ApplicationExpection("Failed to generate preSignedURL", 500);
+        throw new Errors_1.ApplicationException("Failed to generate preSignedURL", 500);
     }
     return url;
 };

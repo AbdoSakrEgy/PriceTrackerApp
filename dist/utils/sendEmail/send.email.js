@@ -4,7 +4,7 @@ exports.sendEmail = void 0;
 const nodemailer_1 = require("nodemailer");
 const sendEmail = async ({ to, subject, html, }) => {
     const transporter = (0, nodemailer_1.createTransport)({
-        host: "smtp.ethereal.email",
+        host: process.env.HOST,
         port: 465,
         secure: true,
         service: "gmail",
@@ -18,7 +18,7 @@ const sendEmail = async ({ to, subject, html, }) => {
     });
     try {
         const info = await transporter.sendMail({
-            from: `"SocialApp" <${process.env.SENDER_EMAIL}>`, // sender address
+            from: `"ImaginoApp" <${process.env.SENDER_EMAIL}>`, // sender address
             to, // list of receivers
             subject, // Subject line
             html, // html body

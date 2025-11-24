@@ -1,20 +1,26 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UserServices = void 0;
+const user_model_1 = require("./user.model");
 const successHandler_1 = require("../../utils/successHandler");
-const user_repo_1 = require("./user.repo");
 const S3_services_1 = require("../../utils/multer/S3.services");
-const multer_upload_1 = require("../../utils/multer/multer.upload");
 const Errors_1 = require("../../utils/Errors");
 const util_1 = require("util");
 const stream_1 = require("stream");
 const createS3WriteStreamPipe = (0, util_1.promisify)(stream_1.pipeline);
 class UserServices {
-    userRepo = new user_repo_1.UserRepo();
+    userModel = user_model_1.UserModel;
     constructor() { }
     // ============================ userProfile ============================
-    userProfile = (req, res, next) => {
-        return;
+    userProfile = async (req, res, next) => {
+        let user = res.locals.user;
+        let userId = req.params?.userId;
+        // step: if userId existence
+        if (userId) {
+            user = await this.userModel.findOne({ filter: { _id: userId } });
+        }
+        userId = user._id;
+        return (0, successHandler_1.successHandler)({ res, result: { user } });
     };
     // ============================ uploadProfileImage ============================
     uploadProfileImage = async (req, res, next) => {
@@ -25,7 +31,7 @@ class UserServices {
             fileFromMulter: req.file,
         });
         // step: update user
-        const updatedUser = await this.userRepo.findOneAndUpdate({
+        const updatedUser = await this.userModel.findOneAndUpdate({
             filter: { _id: user._id },
             data: { $set: { profileImage: Key } },
         });
@@ -35,67 +41,6 @@ class UserServices {
             result: { Key },
         });
     };
-    // ============================ uploadProfileVideo ============================
-    uploadProfileVideo = async (req, res, next) => {
-        const user = res.locals.user;
-        // step: upload video
-        const Key = await (0, S3_services_1.uploadSingleLargeFileS3)({
-            dest: `users/${user._id}/profileVideo`,
-            fileFromMulter: req.file,
-            storeIn: multer_upload_1.StoreInEnum.disk,
-        });
-        // step: update user
-        const updatedUser = await this.userRepo.findOneAndUpdate({
-            filter: { _id: user._id },
-            data: { $set: { profileVideo: Key } },
-        });
-        return (0, successHandler_1.successHandler)({
-            res,
-            message: "Profile video uploaded successfully",
-            result: { Key },
-        });
-    };
-    // ============================ uploadAvatarImage ============================
-    uploadAvatarImage = async (req, res, next) => {
-        const user = res.locals.user;
-        const { fileName, fileType } = req.body;
-        // step: upload image
-        const { url, Key } = await (0, S3_services_1.createPreSignedUrlToUploadFileS3)({
-            dest: `users/${user._id}/avatarImage`,
-            fileName,
-            ContentType: fileType,
-        });
-        // step: update user
-        const updatedUser = await this.userRepo.findOneAndUpdate({
-            filter: { _id: user._id },
-            data: { $set: { avatarImage: Key } },
-        });
-        return (0, successHandler_1.successHandler)({
-            res,
-            message: "Use url to upload your image by using it as API with PUT method",
-            result: { url, Key },
-        });
-    };
-    // ============================ uploadCoverImages ============================
-    uploadCoverImages = async (req, res, next) => {
-        console.log(req.body);
-        const user = res.locals.user;
-        // step: upload images
-        const Keys = await (0, S3_services_1.uploadMultiFilesS3)({
-            filesFromMulter: req.files,
-            dest: `users/${user._id}/coverImages`,
-        });
-        // step: update user
-        const updatedUser = await this.userRepo.findOneAndUpdate({
-            filter: { _id: user._id },
-            data: { $set: { coverImages: Keys } },
-        });
-        return (0, successHandler_1.successHandler)({
-            res,
-            message: "Cover images uploaded successfully",
-            result: { Keys },
-        });
-    };
     // ============================ getFile ============================
     getFile = async (req, res, next) => {
         const { downloadName } = req.query;
@@ -103,7 +48,7 @@ class UserServices {
         const Key = path.join("/");
         const fileObject = await (0, S3_services_1.getFileS3)({ Key });
         if (!fileObject?.Body) {
-            throw new Errors_1.ApplicationExpection("Failed to get file", 400);
+            throw new Errors_1.ApplicationException("Failed to get file", 400);
         }
         res.setHeader("Content-Type", `${fileObject.ContentType}` || "application/octet-stream");
         if (downloadName) {
@@ -151,7 +96,7 @@ class UserServices {
         const user = res.locals.user;
         const { firstName, lastName, age, gender, phone } = req.body;
         // step: update basic info
-        const updatedUser = await this.userRepo.findOneAndUpdate({
+        const updatedUser = await this.userModel.findOneAndUpdate({
             filter: { _id: user._id },
             data: { $set: { firstName, lastName, age, gender, phone } },
         });

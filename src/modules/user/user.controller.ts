@@ -1,8 +1,6 @@
 import { Router } from "express";
 import { UserServices } from "./user.service";
 import { auth } from "../../middlewares/auth.middleware";
-import { UserModel } from "./user.model";
-import { UserRepo } from "./user.repo";
 import { validation } from "../../middlewares/validation.middleware";
 import {
   deleteMultiFilesSchema,
@@ -11,11 +9,6 @@ import {
   uploadAvatarImageSchema,
   uploadProfileImageSchema,
   uploadProfileVideoSchema,
-  uploadCoverImagesSchema,
-  sendFriendRequestSchema,
-  acceptFriendRequestSchema,
-  blockUserSchema,
-  deleteFriendRequestSchema,
 } from "./user.validation";
 import {
   fileTypes,
@@ -33,30 +26,6 @@ router.patch(
   multerUpload({}).single("profileImage"),
   validation(uploadProfileImageSchema),
   userServices.uploadProfileImage
-);
-router.patch(
-  "/upload-profile-video",
-  auth,
-  multerUpload({
-    sendedFileType: fileTypes.video,
-    storeIn: StoreInEnum.disk,
-  }).single("profileVideo"),
-  validation(uploadProfileVideoSchema),
-  userServices.uploadProfileVideo
-);
-router.patch(
-  "/upload-avatar-image",
-  auth,
-  validation(uploadAvatarImageSchema),
-  userServices.uploadAvatarImage
-);
-router.patch(
-  "/upload-cover-images",
-  auth,
-  multerUpload({}).array("coverImages", 3),
-  //! not working
-  // validation(uploadCoverImagesSchema),
-  userServices.uploadCoverImages
 );
 //! next api after use it from browser is generate => Error [ERR_HTTP_HEADERS_SENT]...
 router.get("/get-file/*path", userServices.getFile);
