@@ -4,7 +4,7 @@ exports.AmazonServices = void 0;
 const successHandler_1 = require("../../utils/successHandler");
 const amazon_model_1 = require("./amazon.model");
 const Errors_1 = require("../../utils/Errors");
-const amazon_extractor_1 = require("../../utils/amazon/amazon.extractor");
+const amazon_ai_extractor_1 = require("../../utils/amazon/amazon.ai.extractor");
 class AmazonServices {
     constructor() { }
     // ============================ addProduct ============================
@@ -16,7 +16,7 @@ class AmazonServices {
         if (checkUrl)
             throw new Errors_1.ApplicationException("URL already exists", 401);
         // step: extract product data
-        const productData = await (0, amazon_extractor_1.amazonExtractor)(url);
+        const productData = await (0, amazon_ai_extractor_1.amazonAIExtractor)(url);
         // step: add product
         const amazonProduct = await amazon_model_1.AmazonModel.create({ url, ...productData });
         return (0, successHandler_1.successHandler)({
@@ -33,7 +33,7 @@ class AmazonServices {
         if (!product)
             throw new Errors_1.ApplicationException("Product not found", 404);
         // step: check product updates
-        const currentProductData = await (0, amazon_extractor_1.amazonExtractor)(url);
+        const currentProductData = await (0, amazon_ai_extractor_1.amazonAIExtractor)(url);
         if (product.price == currentProductData.price &&
             product.originalPrice == currentProductData.originalPrice &&
             product.discount == currentProductData.discount &&

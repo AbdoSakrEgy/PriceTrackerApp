@@ -1,24 +1,27 @@
 import cron from "node-cron";
-import { amazonCheckUpdates } from "./amazon.check.updates";
+import { amazonCheckOldProducts } from "./amazon.check.old.products";
+import { amazonCheckNewProducts } from "./amazon.check.new.products";
 
 // Run every 6 hours
 cron.schedule("0 */6 * * *", async () => {
-  console.log("🔍 Running automatic Amazon checkUpdates...");
+  console.log("🔍 Running Amazon node-cron service...");
   try {
-    await amazonCheckUpdates();
-    console.log("✅ Amazon checkUpdates completed");
+    // await amazonCheckOldProducts();
+    await amazonCheckNewProducts();
+    console.log("✅ Amazon node-cron service completed");
   } catch (error) {
-    console.error("❌ Error running checkUpdates:", error);
+    console.error("❌ Error running node-cron service:", error);
   }
 });
 
 // Run immediately
 (async () => {
-  console.log("🔍 Running automatic Amazon checkUpdates...");
+  console.log("🔍 Running Amazon node-cron service...");
   try {
-    await amazonCheckUpdates();
-    console.log("✅ Amazon checkUpdates completed");
+    // await amazonCheckOldProducts();
+    await amazonCheckNewProducts();
+    console.log("✅ Amazon node-cron service completed");
   } catch (error) {
-    console.error("❌ Error running checkUpdates:", error);
+    console.error("❌ Error running node-cron service:", error);
   }
 })();

@@ -3,7 +3,7 @@ import { NextFunction, Request, Response } from "express";
 import { IAmazonServices } from "../../types/amazon.modules.types";
 import { AmazonModel } from "./amazon.model";
 import { ApplicationException } from "../../utils/Errors";
-import { amazonExtractor } from "../../utils/amazon/amazon.extractor";
+import { amazonAIExtractor } from "../../utils/amazon/amazon.ai.extractor";
 import { addProductDTO, getProductDTO, updateProductDTO } from "./amazon.dto";
 
 export class AmazonServices implements IAmazonServices {
@@ -21,7 +21,7 @@ export class AmazonServices implements IAmazonServices {
     const checkUrl = await AmazonModel.findOne({ url });
     if (checkUrl) throw new ApplicationException("URL already exists", 401);
     // step: extract product data
-    const productData = await amazonExtractor(url);
+    const productData = await amazonAIExtractor(url);
     // step: add product
     const amazonProduct = await AmazonModel.create({ url, ...productData });
     return successHandler({
@@ -42,7 +42,7 @@ export class AmazonServices implements IAmazonServices {
     const product = await AmazonModel.findOne({ url });
     if (!product) throw new ApplicationException("Product not found", 404);
     // step: check product updates
-    const currentProductData = await amazonExtractor(url);
+    const currentProductData = await amazonAIExtractor(url);
     if (
       product.price == currentProductData.price &&
       product.originalPrice == currentProductData.originalPrice &&

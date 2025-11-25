@@ -1,12 +1,12 @@
 import { AmazonModel } from "../../modules/amazon/amazon.model";
-import { amazonExtractor } from "./amazon.extractor";
+import { amazonAIExtractor } from "./amazon.ai.extractor";
 
-export async function amazonCheckUpdates() {
+export async function amazonCheckOldProducts() {
   const updatedProductsArr: any = [];
   const allProducts = await AmazonModel.find();
   for (const product of allProducts) {
     // step: check product updates
-    const currentProductData = await amazonExtractor(product.url);
+    const currentProductData = await amazonAIExtractor(product.url);
     if (
       product.price == currentProductData.price &&
       product.originalPrice == currentProductData.originalPrice &&
@@ -29,4 +29,5 @@ export async function amazonCheckUpdates() {
     );
     updatedProductsArr.push(updatedProduct);
   }
+  console.log("✅ amazonCheckOldProducts finished");
 }

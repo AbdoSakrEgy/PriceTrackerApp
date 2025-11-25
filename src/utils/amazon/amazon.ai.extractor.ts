@@ -16,7 +16,7 @@ interface IAmazonProductData {
   category?: string;
 }
 
-export const amazonExtractor = async (
+export const amazonAIExtractor = async (
   url: string
 ): Promise<IAmazonProductData> => {
   let browser;
@@ -195,5 +195,5 @@ const extractDataFromScreenshot = async (
 };
 
 // Usage example:
-// const data = await amazonExtractor("https://www.amazon.com/dp/B08N5WRWNW");
+// const data = await amazonAIExtractor("https://www.amazon.com/dp/B08N5WRWNW");
 // console.log(data);
