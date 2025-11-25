@@ -14,6 +14,7 @@ const routes_1 = __importDefault(require("./routes"));
 const db_connection_1 = require("./DB/db.connection");
 const Errors_1 = require("./utils/Errors");
 const cors_1 = __importDefault(require("cors"));
+// import "./utils/amazon/amazon.node.cron"; // To run amazon.node.cron.ts
 var whitelist = [
     "http://example1.com",
     "http://example2.com",

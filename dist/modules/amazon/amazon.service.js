@@ -4,7 +4,7 @@ exports.AmazonServices = void 0;
 const successHandler_1 = require("../../utils/successHandler");
 const amazon_model_1 = require("./amazon.model");
 const Errors_1 = require("../../utils/Errors");
-const amazon_extractor_1 = require("../../utils/extractors/amazon.extractor");
+const amazon_extractor_1 = require("../../utils/amazon/amazon.extractor");
 class AmazonServices {
     constructor() { }
     // ============================ addProduct ============================

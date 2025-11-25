@@ -9,6 +9,7 @@ import router from "./routes";
 import { connectDB } from "./DB/db.connection";
 import { ApplicationException, IError } from "./utils/Errors";
 import cors from "cors";
+// import "./utils/amazon/amazon.node.cron"; // To run amazon.node.cron.ts
 
 var whitelist = [
   "http://example1.com",

@@ -103,25 +103,23 @@ const extractDataFromScreenshot = async (
     });
 
     const prompt = `Analyze this Amazon product page screenshot and extract the following information. Return ONLY a valid JSON object with no additional text, markdown, or code blocks:
-
-{
-  "title": "full product title",
-  "price": <current price as number (extract just the number, no currency symbols)>,
-  "originalPrice": <original/crossed-out price as number or null if not shown>,
-  "discount": <discount percentage as number or null if not shown>,
-  "rating": <star rating as number (e.g., 4.5) or null>,
-  "reviewCount": <total number of reviews as number or null>,
-  "seller": "seller/brand name or null",
-  "availability": "in stock/out of stock/availability status",
-  "description": "brief product description if visible"
-  "image": "<URL of the main product image>",
-  "category": "<the product's main category/breadcrumb (e.g., 'Electronics', 'Home & Kitchen') or null>"
-}
-
-Important:
-- Extract prices as pure numbers (e.g., 29.99 not "$29.99")
-- If a field is not visible, use null
-- Return valid JSON only, no markdown formatting`;
+                    {
+                      "title": "full product title",
+                      "price": <current price as number (extract just the number, no currency symbols)>,
+                      "originalPrice": <original/crossed-out price as number or null if not shown>,
+                      "discount": <discount percentage as number or null if not shown>,
+                      "rating": <star rating as number (e.g., 4.5) or null>,
+                      "reviewCount": <total number of reviews as number or null>,
+                      "seller": "seller/brand name or null",
+                      "availability": "in stock/out of stock/availability status",
+                      "description": "brief product description if visible"
+                      "image": "<URL of the main product image>",
+                      "category": "<the product's main category/breadcrumb (e.g., 'Electronics', 'Home & Kitchen') or null>"
+                    }
+                    Important:
+                    - Extract prices as pure numbers (e.g., 29.99 not "$29.99")
+                    - If a field is not visible, use null
+                    - Return valid JSON only, no markdown formatting`;
 
     const imagePart = {
       inlineData: {

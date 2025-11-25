@@ -3,7 +3,7 @@ import { NextFunction, Request, Response } from "express";
 import { IAmazonServices } from "../../types/amazon.modules.types";
 import { AmazonModel } from "./amazon.model";
 import { ApplicationException } from "../../utils/Errors";
-import { amazonExtractor } from "../../utils/extractors/amazon.extractor";
+import { amazonExtractor } from "../../utils/amazon/amazon.extractor";
 import { addProductDTO, getProductDTO, updateProductDTO } from "./amazon.dto";
 
 export class AmazonServices implements IAmazonServices {
