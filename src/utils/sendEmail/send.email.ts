@@ -24,7 +24,7 @@ export const sendEmail = async ({
   });
   try {
     const info = await transporter.sendMail({
-      from: `"ImaginoApp" <${process.env.SENDER_EMAIL}>`, // sender address
+      from: `"PriceTrackerApp" <${process.env.SENDER_EMAIL}>`, // sender address
       to, // list of receivers
       subject, // Subject line
       html, // html body

@@ -78,6 +78,8 @@ const extractDataFromScreenshot = async (base64Image) => {
   "seller": "seller/brand name or null",
   "availability": "in stock/out of stock/availability status",
   "description": "brief product description if visible"
+  "image": "<URL of the main product image>",
+  "category": "<the product's main category/breadcrumb (e.g., 'Electronics', 'Home & Kitchen') or null>"
 }
 
 Important:
@@ -128,6 +130,12 @@ Important:
         }
         if (extractedData.description) {
             productData.description = extractedData.description;
+        }
+        if (extractedData.image) {
+            productData.image = extractedData.image;
+        }
+        if (extractedData.category) {
+            productData.category = extractedData.category;
         }
         return productData;
     }

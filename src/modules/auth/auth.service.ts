@@ -43,7 +43,7 @@ export class AuthServices implements IAuthServcies {
     const otpCode = createOtp();
     const { isEmailSended, info } = await sendEmail({
       to: email,
-      subject: "ImaginoApp",
+      subject: "PriceTrackerApp",
       html: template({
         otpCode,
         receiverName: firstName,
@@ -113,7 +113,7 @@ export class AuthServices implements IAuthServcies {
       const otpCode = createOtp();
       const { isEmailSended, info } = await sendEmail({
         to: user.email,
-        subject: "ImaginoApp",
+        subject: "PriceTrackerApp",
         html: template({
           otpCode,
           receiverName: user.firstName,
@@ -283,7 +283,7 @@ export class AuthServices implements IAuthServcies {
     const otpCodeForCurrentEmail = createOtp();
     const { isEmailSended } = await sendEmail({
       to: user.email,
-      subject: "ImaginoApp",
+      subject: "PriceTrackerApp",
       html: template({
         otpCode: otpCodeForCurrentEmail,
         receiverName: user.firstName,
@@ -301,7 +301,7 @@ export class AuthServices implements IAuthServcies {
     const otpCodeForNewEmail = createOtp();
     const resultOfSendEmail = await sendEmail({
       to: newEmail,
-      subject: "ImaginoApp",
+      subject: "PriceTrackerApp",
       html: template({
         otpCode: otpCodeForNewEmail,
         receiverName: user.firstName,
@@ -366,7 +366,7 @@ export class AuthServices implements IAuthServcies {
     const otpCode = createOtp();
     const { isEmailSended, info } = await sendEmail({
       to: email,
-      subject: "ImaginoApp",
+      subject: "PriceTrackerApp",
       html: template({
         otpCode,
         receiverName: user.firstName,
@@ -539,7 +539,7 @@ export class AuthServices implements IAuthServcies {
     const otpCode = createOtp();
     const { isEmailSended, info } = await sendEmail({
       to: user.email,
-      subject: "ImaginoApp",
+      subject: "PriceTrackerApp",
       html: template({
         otpCode,
         receiverName: user.firstName,
@@ -580,7 +580,6 @@ export class AuthServices implements IAuthServcies {
   ): Promise<Response> => {
     const user = res.locals.user;
     const otp = (req.body as activeDeactive2FADTO)?.otp;
-    console.log({ otp });
     // step: check otp existence
     if (!otp) {
       const updatedUser = await UserModel.findOneAndUpdate(

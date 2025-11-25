@@ -32,7 +32,9 @@ export const uploadSingleSmallFileS3 = async ({
   const command = new PutObjectCommand({
     Bucket,
     ACL,
-    Key: `ImaginoApp/${dest}/${fileFromMulter.originalname}__${nanoid(15)}`,
+    Key: `PriceTrackerApp/${dest}/${fileFromMulter.originalname}__${nanoid(
+      15
+    )}`,
     Body:
       storeIn == StoreInEnum.memory
         ? fileFromMulter.buffer
@@ -66,7 +68,9 @@ export const uploadSingleLargeFileS3 = async ({
     params: {
       Bucket,
       ACL,
-      Key: `ImaginoApp/${dest}/${fileFromMulter.originalname}__${nanoid(15)}`,
+      Key: `PriceTrackerApp/${dest}/${fileFromMulter.originalname}__${nanoid(
+        15
+      )}`,
       Body:
         storeIn == StoreInEnum.memory
           ? fileFromMulter.buffer
@@ -216,7 +220,7 @@ export const createPreSignedUrlToUploadFileS3 = async ({
   const command = new PutObjectCommand({
     Bucket,
     ACL,
-    Key: `ImaginoApp/${dest}/${fileName}__${nanoid(15)}`,
+    Key: `PriceTrackerApp/${dest}/${fileName}__${nanoid(15)}`,
     ContentType,
   });
 

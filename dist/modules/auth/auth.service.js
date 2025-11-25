@@ -24,7 +24,7 @@ class AuthServices {
         const otpCode = (0, createOtp_1.createOtp)();
         const { isEmailSended, info } = await (0, send_email_1.sendEmail)({
             to: email,
-            subject: "ImaginoApp",
+            subject: "PriceTrackerApp",
             html: (0, generateHTML_1.template)({
                 otpCode,
                 receiverName: firstName,
@@ -81,7 +81,7 @@ class AuthServices {
             const otpCode = (0, createOtp_1.createOtp)();
             const { isEmailSended, info } = await (0, send_email_1.sendEmail)({
                 to: user.email,
-                subject: "ImaginoApp",
+                subject: "PriceTrackerApp",
                 html: (0, generateHTML_1.template)({
                     otpCode,
                     receiverName: user.firstName,
@@ -214,7 +214,7 @@ class AuthServices {
         const otpCodeForCurrentEmail = (0, createOtp_1.createOtp)();
         const { isEmailSended } = await (0, send_email_1.sendEmail)({
             to: user.email,
-            subject: "ImaginoApp",
+            subject: "PriceTrackerApp",
             html: (0, generateHTML_1.template)({
                 otpCode: otpCodeForCurrentEmail,
                 receiverName: user.firstName,
@@ -232,7 +232,7 @@ class AuthServices {
         const otpCodeForNewEmail = (0, createOtp_1.createOtp)();
         const resultOfSendEmail = await (0, send_email_1.sendEmail)({
             to: newEmail,
-            subject: "ImaginoApp",
+            subject: "PriceTrackerApp",
             html: (0, generateHTML_1.template)({
                 otpCode: otpCodeForNewEmail,
                 receiverName: user.firstName,
@@ -286,7 +286,7 @@ class AuthServices {
         const otpCode = (0, createOtp_1.createOtp)();
         const { isEmailSended, info } = await (0, send_email_1.sendEmail)({
             to: email,
-            subject: "ImaginoApp",
+            subject: "PriceTrackerApp",
             html: (0, generateHTML_1.template)({
                 otpCode,
                 receiverName: user.firstName,
@@ -420,7 +420,7 @@ class AuthServices {
         const otpCode = (0, createOtp_1.createOtp)();
         const { isEmailSended, info } = await (0, send_email_1.sendEmail)({
             to: user.email,
-            subject: "ImaginoApp",
+            subject: "PriceTrackerApp",
             html: (0, generateHTML_1.template)({
                 otpCode,
                 receiverName: user.firstName,
@@ -452,7 +452,6 @@ class AuthServices {
     activeDeactive2FA = async (req, res, next) => {
         const user = res.locals.user;
         const otp = req.body?.otp;
-        console.log({ otp });
         // step: check otp existence
         if (!otp) {
             const updatedUser = await user_model_1.UserModel.findOneAndUpdate({ _id: user._id }, { $set: { is2FAActive: false } }, {

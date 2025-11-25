@@ -14,7 +14,7 @@ const uploadSingleSmallFileS3 = async ({ Bucket = process.env.BUCKET_NAME, ACL =
     const command = new client_s3_1.PutObjectCommand({
         Bucket,
         ACL,
-        Key: `ImaginoApp/${dest}/${fileFromMulter.originalname}__${(0, nanoid_1.nanoid)(15)}`,
+        Key: `PriceTrackerApp/${dest}/${fileFromMulter.originalname}__${(0, nanoid_1.nanoid)(15)}`,
         Body: storeIn == multer_upload_1.StoreInEnum.memory
             ? fileFromMulter.buffer
             : (0, fs_1.createReadStream)(fileFromMulter.path),
@@ -35,7 +35,7 @@ const uploadSingleLargeFileS3 = async ({ Bucket = process.env.BUCKET_NAME, ACL =
         params: {
             Bucket,
             ACL,
-            Key: `ImaginoApp/${dest}/${fileFromMulter.originalname}__${(0, nanoid_1.nanoid)(15)}`,
+            Key: `PriceTrackerApp/${dest}/${fileFromMulter.originalname}__${(0, nanoid_1.nanoid)(15)}`,
             Body: storeIn == multer_upload_1.StoreInEnum.memory
                 ? fileFromMulter.buffer
                 : (0, fs_1.createReadStream)(fileFromMulter.path),
@@ -138,7 +138,7 @@ const createPreSignedUrlToUploadFileS3 = async ({ Bucket = process.env.BUCKET_NA
     const command = new client_s3_1.PutObjectCommand({
         Bucket,
         ACL,
-        Key: `ImaginoApp/${dest}/${fileName}__${(0, nanoid_1.nanoid)(15)}`,
+        Key: `PriceTrackerApp/${dest}/${fileName}__${(0, nanoid_1.nanoid)(15)}`,
         ContentType,
     });
     const url = await (0, s3_request_presigner_1.getSignedUrl)((0, S3_config_1.S3Config)(), command, { expiresIn });
