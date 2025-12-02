@@ -12,10 +12,5 @@ router.get("/test-deploy", userServices.testDeploy);
 router.get("/user-profile", auth_middleware_1.auth, userServices.userProfile);
 router.get("/user-profile/:userId", auth_middleware_1.auth, userServices.userProfile);
 router.patch("/upload-profile-image", auth_middleware_1.auth, (0, multer_upload_1.multerUpload)({}).single("profileImage"), (0, validation_middleware_1.validation)(user_validation_1.uploadProfileImageSchema), userServices.uploadProfileImage);
-//! next api after use it from browser is generate => Error [ERR_HTTP_HEADERS_SENT]...
-router.get("/get-file/*path", userServices.getFile);
-router.get("/create-presignedUrl-toGetFile/*path", (0, validation_middleware_1.validation)(user_validation_1.createPresignedUrlToGetFileSchema), userServices.createPresignedUrlToGetFile);
-router.delete("/delete-file/*path", userServices.deleteFile);
-router.delete("/delete-multi-files", (0, validation_middleware_1.validation)(user_validation_1.deleteMultiFilesSchema), userServices.deleteMultiFiles);
 router.patch("/update-basic-info", auth_middleware_1.auth, (0, validation_middleware_1.validation)(user_validation_1.updateBasicInfoSchema), userServices.updateBasicInfo);
 exports.default = router;

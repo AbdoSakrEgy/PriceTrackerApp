@@ -7,16 +7,6 @@ import {
   updateBasicInfoDTO,
   uploadAvatarImageDTO,
 } from "./user.dto";
-import {
-  createPreSignedUrlToUploadFileS3,
-  uploadMultiFilesS3,
-  uploadSingleSmallFileS3,
-  uploadSingleLargeFileS3,
-  getFileS3,
-  createPresignedUrlToGetFileS3,
-  deleteFileS3,
-  deleteMultiFilesS3,
-} from "../../utils/multer/S3.services";
 import { HydratedDocument } from "mongoose";
 import { StoreInEnum } from "../../utils/multer/multer.upload";
 import { ApplicationException } from "../../utils/Errors";
@@ -60,100 +50,7 @@ export class UserServices implements IUserServices {
     res: Response,
     next: NextFunction
   ): Promise<Response> => {
-    const user = res.locals.user as HydratedDocument<IUser>;
-    // step: upload image
-    const Key = await uploadSingleSmallFileS3({
-      dest: `users/${user._id}/profileImage`,
-      fileFromMulter: req.file as Express.Multer.File,
-    });
-    // step: update user
-    const updatedUser = await this.userModel.findOneAndUpdate({
-      filter: { _id: user._id },
-      data: { $set: { profileImage: Key } },
-    });
-    return successHandler({
-      res,
-      message: "Profile image uploaded successfully",
-      result: { Key },
-    });
-  };
-
-  // ============================ getFile ============================
-  getFile = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> => {
-    const { downloadName } = req.query;
-    const path = req.params.path as unknown as string[];
-    const Key = path.join("/");
-    const fileObject = await getFileS3({ Key });
-    if (!fileObject?.Body) {
-      throw new ApplicationException("Failed to get file", 400);
-    }
-    res.setHeader(
-      "Content-Type",
-      `${fileObject.ContentType}` || "application/octet-stream"
-    );
-    if (downloadName) {
-      res.setHeader(
-        "Content-Disposition",
-        `attachment; filename=${downloadName}`
-      );
-    }
-    return await createS3WriteStreamPipe(
-      fileObject.Body as NodeJS.ReadableStream,
-      res
-    );
-  };
-
-  // ============================ createPresignedUrlToGetFile ============================
-  createPresignedUrlToGetFile = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ) => {
-    const {
-      download = false,
-      downloadName = "dumy",
-    }: createPresignedUrlToGetFileDTO = req.body;
-    const path = req.params.path as unknown as string[];
-    const Key = path.join("/");
-    const url = await createPresignedUrlToGetFileS3({
-      Key,
-      download,
-      downloadName,
-    });
-    return successHandler({
-      res,
-      message: "Use this URL to get file",
-      result: { url },
-    });
-  };
-
-  // ============================ deleteFile ============================
-  deleteFile = async (req: Request, res: Response, next: NextFunction) => {
-    const path = req.params.path as unknown as string[];
-    const Key = path.join("/");
-    const result = await deleteFileS3({ Key });
-    return successHandler({
-      res,
-      message: "File deleted successfully",
-    });
-  };
-
-  // ============================ deleteMultiFiles ============================
-  deleteMultiFiles = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ) => {
-    const { Keys, Quiet = false }: deleteMultiFilesDTO = req.body;
-    const result = await deleteMultiFilesS3({ Keys, Quiet });
-    return successHandler({
-      res,
-      message: "Files deleted successfully",
-    });
+    return successHandler({ res });
   };
 
   // ============================ updateBasicInfo ============================
