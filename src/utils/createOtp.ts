@@ -1,6 +1,8 @@
-// TypeScript version
-export const createOtp = async () => {
-  const { customAlphabet } = await import("nanoid");
-  const otp = customAlphabet("0123456", 6)();
+export const createOtp = () => {
+  let otp = "";
+  const digits = "0123456789";
+  for (let i = 0; i < 6; i++) {
+    otp += digits[Math.floor(Math.random() * digits.length)];
+  }
   return otp;
 };

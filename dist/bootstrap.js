@@ -14,8 +14,7 @@ dotenv_1.default.config({
     path: path_1.default.resolve("./src/config/.env"),
 });
 const app = (0, express_1.default)();
-// DB connection should run once when function initializes
-(0, db_connection_1.connectDB)();
+// Middleware
 var whitelist = [
     "http://example1.com",
     "http://example2.com",
@@ -43,4 +42,19 @@ app.use((err, req, res, next) => {
         stack: err.stack,
     });
 });
-exports.default = app; // THIS IS IMPORTANT
+// Wrap server start in an async function
+const startServer = async () => {
+    try {
+        await (0, db_connection_1.connectDB)(); // ✅ wait for DB connection
+        console.log("DB connected, starting server...");
+        app.listen(3000, () => {
+            console.log("Server running on port 3000");
+        });
+    }
+    catch (err) {
+        console.error("Failed to start server:", err);
+        process.exit(1); // Stop server if DB fails
+    }
+};
+startServer();
+exports.default = app;

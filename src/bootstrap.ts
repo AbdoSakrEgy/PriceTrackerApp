@@ -12,9 +12,7 @@ dotenv.config({
 
 const app = express();
 
-// DB connection should run once when function initializes
-connectDB();
-
+// Middleware
 var whitelist = [
   "http://example1.com",
   "http://example2.com",
@@ -45,4 +43,21 @@ app.use((err: IError, req: Request, res: Response, next: NextFunction) => {
   });
 });
 
-export default app; // THIS IS IMPORTANT
+// Wrap server start in an async function
+const startServer = async () => {
+  try {
+    await connectDB(); // ✅ wait for DB connection
+    console.log("DB connected, starting server...");
+
+    app.listen(3000, () => {
+      console.log("Server running on port 3000");
+    });
+  } catch (err) {
+    console.error("Failed to start server:", err);
+    process.exit(1); // Stop server if DB fails
+  }
+};
+
+startServer();
+
+export default app;
