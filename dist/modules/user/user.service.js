@@ -11,6 +11,10 @@ const createS3WriteStreamPipe = (0, util_1.promisify)(stream_1.pipeline);
 class UserServices {
     userModel = user_model_1.UserModel;
     constructor() { }
+    // ============================ testDeploy ============================
+    testDeploy = async (req, res, next) => {
+        return (0, successHandler_1.successHandler)({ res, result: { msg: "Hello in PriceVisionApp" } });
+    };
     // ============================ userProfile ============================
     userProfile = async (req, res, next) => {
         let user = res.locals.user;

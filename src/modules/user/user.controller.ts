@@ -18,7 +18,7 @@ import {
 const router = Router();
 const userServices = new UserServices();
 
-router.get("/test-deploy",( userServices.testDeploy));
+router.get("/test-deploy", userServices.testDeploy);
 router.get("/user-profile", auth, userServices.userProfile);
 router.get("/user-profile/:userId", auth, userServices.userProfile);
 router.patch(
