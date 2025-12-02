@@ -29,6 +29,15 @@ export class UserServices implements IUserServices {
   private userModel = UserModel;
 
   constructor() {}
+  // ============================ testDeploy ============================
+  testDeploy = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response> => {
+    return successHandler({ res, result: { msg: "Hello in PriceVisionApp" } });
+  };
+
   // ============================ userProfile ============================
   userProfile = async (
     req: Request,
