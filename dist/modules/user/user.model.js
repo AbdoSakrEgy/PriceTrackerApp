@@ -55,18 +55,22 @@ const userSchema = new mongoose_1.Schema({
         required: true,
     },
     age: { type: Number, min: 18, max: 200 },
-    gender: { type: String, enum: Object.values(user_module_types_1.Gender), default: user_module_types_1.Gender.MALE },
+    gender: {
+        type: String,
+        enum: Object.values(user_module_types_1.GenderEnum),
+        default: user_module_types_1.GenderEnum.MALE,
+    },
     phone: {
         type: String,
         trim: true,
-        validate: {
-            validator: (v) => /^\+?[1-9]\d{7,14}$/.test(v.replace(/[\s-]/g, "")),
-            message: (props) => `${props.value} is not a valid phone number!`,
-        },
         set: (value) => (value ? (0, crypto_1.encrypt)(value) : undefined),
         get: (value) => (value ? (0, crypto_1.decrypt)(value) : undefined),
     },
-    role: { type: String, enum: Object.values(user_module_types_1.Role), default: user_module_types_1.Role.USER },
+    role: {
+        type: String,
+        enum: Object.values(user_module_types_1.RoleEnum),
+        default: user_module_types_1.RoleEnum.USER,
+    },
     // auth and OTP
     email: { type: String, required: true, unique: true },
     emailOtp: { otp: { type: String }, expiredAt: Date },
@@ -78,10 +82,24 @@ const userSchema = new mongoose_1.Schema({
     credentialsChangedAt: Date,
     isActive: { type: Boolean, default: true },
     deletedBy: { type: mongoose_1.default.Schema.Types.ObjectId, ref: "user" },
-    // others
-    profileImage: { type: String },
     is2FAActive: { type: Boolean, default: false },
     otp2FA: { otp: { type: String }, expiredAt: Date },
+    // others
+    profileImage: {
+        public_id: { type: String },
+        secure_url: { type: String },
+    },
+    // payment
+    checkoutSessionId: { type: String },
+    paymentIntentId: { type: String },
+    refundId: { type: String },
+    refundedAt: { type: Date },
+    pricingPlan: {
+        type: String,
+        enum: Object.values(user_module_types_1.PricingPlanEnum),
+        default: user_module_types_1.PricingPlanEnum.FREE,
+    },
+    avaliableCredits: { type: Number, default: 50 },
 }, { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } });
 // virtuals
 userSchema.virtual("fullName").get(function () {
