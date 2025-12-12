@@ -2,7 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthServices = void 0;
 const user_model_1 = require("./../user/user.model");
-const Errors_1 = require("../../utils/Errors");
 const generateHTML_1 = require("../../utils/sendEmail/generateHTML");
 const jwt_1 = require("../../utils/jwt");
 const createOtp_1 = require("../../utils/createOtp");
@@ -20,7 +19,7 @@ class AuthServices {
         // step: check user existence
         const isUserExist = await user_model_1.UserModel.findOne({ email });
         if (isUserExist) {
-            throw new Errors_1.NotValidEmail("User already exist");
+            throw new app_error_1.AppError(http_status_code_1.HttpStatusCode.BAD_REQUEST, "User already exist");
         }
         // step: send email otp
         const otpCode = (0, createOtp_1.createOtp)();

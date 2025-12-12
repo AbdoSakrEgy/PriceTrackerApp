@@ -12,7 +12,6 @@ import {
   updateEmaiDTO,
   updatePasswordDTO,
 } from "./auth.dto";
-import { NotValidEmail } from "../../utils/Errors";
 import { HydratedDocument } from "mongoose";
 import { template } from "../../utils/sendEmail/generateHTML";
 import { createJwt } from "../../utils/jwt";
@@ -39,7 +38,7 @@ export class AuthServices implements IAuthServcies {
     // step: check user existence
     const isUserExist = await UserModel.findOne({ email });
     if (isUserExist) {
-      throw new NotValidEmail("User already exist");
+      throw new AppError(HttpStatusCode.BAD_REQUEST, "User already exist");
     }
     // step: send email otp
     const otpCode = createOtp();
