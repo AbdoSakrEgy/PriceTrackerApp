@@ -3,7 +3,7 @@ import { UserModel } from "../modules/user/user.model.js";
 import { MyJwtPayload, verifyJwt } from "./jwt.js";
 import { ApplicationException } from "./Errors.js";
 import { HydratedDocument } from "mongoose";
-import { IUser } from "../types/user.module.types.js";
+import { IUser } from "../types/user.module.type.js";
 
 export enum TokenTypesEnum {
   access = "access",

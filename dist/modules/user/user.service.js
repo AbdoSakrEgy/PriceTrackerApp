@@ -2,11 +2,12 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UserServices = void 0;
 const user_model_1 = require("./user.model");
-const successHandler_1 = require("../../utils/successHandler");
-const Errors_1 = require("../../utils/Errors");
-const user_module_types_1 = require("../../types/user.module.types");
+const response_handler_1 = require("../../core/handlers/response.handler");
+const user_module_type_1 = require("../../types/user.module.type");
 const cloudinary_service_1 = require("../../utils/cloudinary/cloudinary.service");
 const stripe_service_1 = require("../../utils/stripe/stripe.service");
+const app_error_1 = require("../../core/errors/app.error");
+const http_status_code_1 = require("../../core/http/http.status.code");
 class UserServices {
     userModel = user_model_1.UserModel;
     constructor() { }
@@ -18,28 +19,28 @@ class UserServices {
         if (userId) {
             const foundUser = await this.userModel.findById(userId);
             if (!foundUser) {
-                throw new Errors_1.ApplicationException("User not found", 404);
+                throw new app_error_1.AppError(http_status_code_1.HttpStatusCode.NOT_FOUND, "User not found");
             }
             user = foundUser;
         }
-        return (0, successHandler_1.successHandler)({ res, result: { user } });
+        return (0, response_handler_1.responseHandler)({ res, data: { user } });
     };
     // ============================ uploadProfileImage ============================
     uploadProfileImage = async (req, res, next) => {
         const user = res.locals.user;
         const file = req.file;
         if (!file) {
-            throw new Errors_1.ApplicationException("profileImage is required", 400);
+            throw new app_error_1.AppError(http_status_code_1.HttpStatusCode.BAD_REQUEST, "profileImage is required");
         }
         const uploadResult = await (0, cloudinary_service_1.uploadSingleFile)({
             fileLocation: file.path,
             storagePathOnCloudinary: `users/${user._id}/profile`,
         });
         const updatedUser = await this.userModel.findOneAndUpdate({ _id: user._id }, { $set: { profileImage: uploadResult } }, { new: true });
-        return (0, successHandler_1.successHandler)({
+        return (0, response_handler_1.responseHandler)({
             res,
             message: "Profile image updated successfully",
-            result: { user: updatedUser },
+            data: { user: updatedUser },
         });
     };
     // ============================ deleteProfileImage ============================
@@ -52,10 +53,10 @@ class UserServices {
             });
         }
         const updatedUser = await this.userModel.findOneAndUpdate({ _id: user._id }, { $unset: { profileImage: "" } }, { new: true });
-        return (0, successHandler_1.successHandler)({
+        return (0, response_handler_1.responseHandler)({
             res,
             message: "Profile image deleted successfully",
-            result: { user: updatedUser },
+            data: { user: updatedUser },
         });
     };
     // ============================ updateBasicInfo ============================
@@ -75,10 +76,10 @@ class UserServices {
             runValidators: true,
             context: "query",
         });
-        return (0, successHandler_1.successHandler)({
+        return (0, response_handler_1.responseHandler)({
             res,
             message: "Basic info updated successfully",
-            result: { user: updatedUser },
+            data: { user: updatedUser },
         });
     };
     // ============================ payWithStripe ============================
@@ -94,15 +95,15 @@ class UserServices {
             ];
             checkCoupon = allowedCoupons.filter((item) => item.code == userCoupon)[0];
             if (!checkCoupon) {
-                throw new Errors_1.ApplicationException("Invalid coupon", 400);
+                throw new app_error_1.AppError(http_status_code_1.HttpStatusCode.BAD_REQUEST, "Invalid coupon");
             }
         }
         // step: calculate plan price
         let costAmount = 0;
-        if (plan == user_module_types_1.PricingPlanEnum.BASIC) {
+        if (plan == user_module_type_1.PricingPlanEnum.BASIC) {
             costAmount = 50;
         }
-        if (plan == user_module_types_1.PricingPlanEnum.PRO) {
+        if (plan == user_module_type_1.PricingPlanEnum.PRO) {
             costAmount = 100;
         }
         // step: collect createCheckoutSession data
@@ -140,7 +141,7 @@ class UserServices {
         // Store the checkout session ID for reference
         user.checkoutSessionId = checkoutSession.id;
         await user.save();
-        return (0, successHandler_1.successHandler)({ res, result: { checkoutSession } });
+        return (0, response_handler_1.responseHandler)({ res, data: { checkoutSession } });
     };
     // ============================ webHookWithStripe ============================
     webHookWithStripe = async (req, res, next) => {
@@ -154,8 +155,8 @@ class UserServices {
             },
         });
         if (!user)
-            throw new Errors_1.ApplicationException("User not found", 404);
-        return (0, successHandler_1.successHandler)({ res, message: "webHookWithStripe done" });
+            throw new app_error_1.AppError(http_status_code_1.HttpStatusCode.NOT_FOUND, "User not found");
+        return (0, response_handler_1.responseHandler)({ res, message: "webHookWithStripe done" });
     };
 }
 exports.UserServices = UserServices;

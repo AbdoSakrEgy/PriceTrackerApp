@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
-import { decodeToken, TokenTypesEnum } from "../utils/decodeToken.js";
-import { ApplicationException } from "../utils/Errors.js";
+import { decodeToken, TokenTypesEnum } from "../../utils/decodeToken.js";
+import { ApplicationException } from "../../utils/Errors.js";
 
 export const auth = async (
   req: Request | any,

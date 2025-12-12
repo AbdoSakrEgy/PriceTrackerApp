@@ -1,5 +1,5 @@
 import { model, Schema } from "mongoose";
-import { IAmazon } from "../../types/amazon.modules.types";
+import { IAmazon } from "../../types/amazon.module.type";
 
 const amazonSchema = new Schema<IAmazon>(
   {

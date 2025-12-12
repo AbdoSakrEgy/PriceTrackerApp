@@ -1,5 +1,5 @@
 import z from "zod";
-import { GenderEnum, RoleEnum } from "../../types/user.module.types";
+import { GenderEnum, RoleEnum } from "../../types/user.module.type";
 
 export const registerSchema = z
   .object({

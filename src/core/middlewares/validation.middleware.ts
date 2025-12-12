@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { ZodObject } from "zod";
-import { ValidationError } from "../utils/Errors";
+import { ValidationError } from "../../utils/Errors";
 
 export const validation = (shcema: ZodObject) => {
   return (req: Request, res: Response, next: NextFunction) => {

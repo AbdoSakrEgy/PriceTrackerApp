@@ -1,42 +1,56 @@
 import { UserModel } from "./user.model";
-import { successHandler } from "../../utils/successHandler";
+import { responseHandler } from "../../core/handlers/response.handler";
 import { NextFunction, Request, Response } from "express";
-import { ApplicationException } from "../../utils/Errors";
-import { IUserServices, PricingPlanEnum } from "../../types/user.module.types";
-import { destroySingleFile, uploadSingleFile } from "../../utils/cloudinary/cloudinary.service";
+import { IUserServices, PricingPlanEnum } from "../../types/user.module.type";
+import {
+  destroySingleFile,
+  uploadSingleFile,
+} from "../../utils/cloudinary/cloudinary.service";
 import Stripe from "stripe";
-import { createCheckoutSession, createCoupon } from "../../utils/stripe/stripe.service";
+import {
+  createCheckoutSession,
+  createCoupon,
+} from "../../utils/stripe/stripe.service";
+import { AppError } from "../../core/errors/app.error";
+import { HttpStatusCode } from "../../core/http/http.status.code";
 
 export class UserServices implements IUserServices {
   private userModel = UserModel;
 
   constructor() {}
   // ============================ userProfile ============================
-  userProfile = async (req: Request, res: Response, next: NextFunction): Promise<Response> => {
+  userProfile = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response> => {
     let user = res.locals.user;
     const userId = req.params?.userId;
     // step: if userId existence load that user
     if (userId) {
       const foundUser = await this.userModel.findById(userId);
       if (!foundUser) {
-        throw new ApplicationException("User not found", 404);
+        throw new AppError(HttpStatusCode.NOT_FOUND, "User not found");
       }
       user = foundUser;
     }
-    return successHandler({ res, result: { user } });
+    return responseHandler({ res, data: { user } });
   };
 
   // ============================ uploadProfileImage ============================
   uploadProfileImage = async (
     req: Request,
     res: Response,
-    next: NextFunction,
+    next: NextFunction
   ): Promise<Response> => {
     const user = res.locals.user;
     const file = req.file;
 
     if (!file) {
-      throw new ApplicationException("profileImage is required", 400);
+      throw new AppError(
+        HttpStatusCode.BAD_REQUEST,
+        "profileImage is required"
+      );
     }
 
     const uploadResult = await uploadSingleFile({
@@ -47,13 +61,13 @@ export class UserServices implements IUserServices {
     const updatedUser = await this.userModel.findOneAndUpdate(
       { _id: user._id },
       { $set: { profileImage: uploadResult } },
-      { new: true },
+      { new: true }
     );
 
-    return successHandler({
+    return responseHandler({
       res,
       message: "Profile image updated successfully",
-      result: { user: updatedUser },
+      data: { user: updatedUser },
     });
   };
 
@@ -61,7 +75,7 @@ export class UserServices implements IUserServices {
   deleteProfileImage = async (
     req: Request,
     res: Response,
-    next: NextFunction,
+    next: NextFunction
   ): Promise<Response> => {
     const user = res.locals.user;
 
@@ -75,18 +89,22 @@ export class UserServices implements IUserServices {
     const updatedUser = await this.userModel.findOneAndUpdate(
       { _id: user._id },
       { $unset: { profileImage: "" } },
-      { new: true },
+      { new: true }
     );
 
-    return successHandler({
+    return responseHandler({
       res,
       message: "Profile image deleted successfully",
-      result: { user: updatedUser },
+      data: { user: updatedUser },
     });
   };
 
   // ============================ updateBasicInfo ============================
-  updateBasicInfo = async (req: Request, res: Response, next: NextFunction): Promise<Response> => {
+  updateBasicInfo = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response> => {
     const user = res.locals.user;
     const { firstName, lastName, age, gender, phone } = req.body;
     const updatedUser = await this.userModel.findOneAndUpdate(
@@ -104,18 +122,22 @@ export class UserServices implements IUserServices {
         new: true,
         runValidators: true,
         context: "query",
-      },
+      }
     );
 
-    return successHandler({
+    return responseHandler({
       res,
       message: "Basic info updated successfully",
-      result: { user: updatedUser },
+      data: { user: updatedUser },
     });
   };
 
   // ============================ payWithStripe ============================
-  payWithStripe = async (req: Request, res: Response, next: NextFunction): Promise<Response> => {
+  payWithStripe = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response> => {
     const user = res.locals.user;
     const { plan, userCoupon } = req.body;
     // step: check coupon validation
@@ -127,7 +149,7 @@ export class UserServices implements IUserServices {
       ];
       checkCoupon = allowedCoupons.filter((item) => item.code == userCoupon)[0];
       if (!checkCoupon) {
-        throw new ApplicationException("Invalid coupon", 400);
+        throw new AppError(HttpStatusCode.BAD_REQUEST, "Invalid coupon");
       }
     }
     // step: calculate plan price
@@ -173,14 +195,14 @@ export class UserServices implements IUserServices {
     // Store the checkout session ID for reference
     user.checkoutSessionId = checkoutSession.id;
     await user.save();
-    return successHandler({ res, result: { checkoutSession } });
+    return responseHandler({ res, data: { checkoutSession } });
   };
 
   // ============================ webHookWithStripe ============================
   webHookWithStripe = async (
     req: Request,
     res: Response,
-    next: NextFunction,
+    next: NextFunction
   ): Promise<Response> => {
     const { userId, plan } = req.body.data.object.metadata;
     // step: check order existence
@@ -192,9 +214,9 @@ export class UserServices implements IUserServices {
           pricingPlan: plan,
           avaliableCredits: 200,
         },
-      },
+      }
     );
-    if (!user) throw new ApplicationException("User not found", 404);
-    return successHandler({ res, message: "webHookWithStripe done" });
+    if (!user) throw new AppError(HttpStatusCode.NOT_FOUND, "User not found");
+    return responseHandler({ res, message: "webHookWithStripe done" });
   };
 }

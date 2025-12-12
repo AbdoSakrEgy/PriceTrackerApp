@@ -1,10 +1,12 @@
-import { successHandler } from "../../utils/successHandler";
+import { responseHandler } from "../../core/handlers/response.handler";
 import { NextFunction, Request, Response } from "express";
-import { IAmazonServices } from "../../types/amazon.modules.types";
+import { IAmazonServices } from "../../types/amazon.module.type";
 import { AmazonModel } from "./amazon.model";
 import { ApplicationException } from "../../utils/Errors";
 import { amazonAIExtractor } from "../../utils/amazon/amazon.ai.extractor";
 import { addProductDTO, getProductDTO, updateProductDTO } from "./amazon.dto";
+import { AppError } from "../../core/errors/app.error";
+import { HttpStatusCode } from "../../core/http/http.status.code";
 
 export class AmazonServices implements IAmazonServices {
   constructor() {}
@@ -19,15 +21,16 @@ export class AmazonServices implements IAmazonServices {
     const { url } = req.body as addProductDTO;
     // step: check url existence
     const checkUrl = await AmazonModel.findOne({ url });
-    if (checkUrl) throw new ApplicationException("URL already exists", 401);
+    if (checkUrl)
+      throw new AppError(HttpStatusCode.BAD_REQUEST, "URL already exists");
     // step: extract product data
     const productData = await amazonAIExtractor(url);
     // step: add product
     const amazonProduct = await AmazonModel.create({ url, ...productData });
-    return successHandler({
+    return responseHandler({
       res,
       message: "Amazon product added successfully",
-      result: { amazonProduct },
+      data: { amazonProduct },
     });
   };
 
@@ -40,7 +43,8 @@ export class AmazonServices implements IAmazonServices {
     const { url } = req.body as updateProductDTO;
     // step: check product existence
     const product = await AmazonModel.findOne({ url });
-    if (!product) throw new ApplicationException("Product not found", 404);
+    if (!product)
+      throw new AppError(HttpStatusCode.NOT_FOUND, "Product not found");
     // step: check product updates
     const currentProductData = await amazonAIExtractor(url);
     if (
@@ -49,7 +53,7 @@ export class AmazonServices implements IAmazonServices {
       product.discount == currentProductData.discount &&
       product.availability == currentProductData.availability
     ) {
-      return successHandler({ res, message: "No updates yet" });
+      return responseHandler({ res, message: "No updates yet" });
     }
     // step: update product
     const newProductVersion = {
@@ -63,10 +67,10 @@ export class AmazonServices implements IAmazonServices {
       { $push: { updateLog: newProductVersion } },
       { new: true }
     );
-    return successHandler({
+    return responseHandler({
       res,
       message: "Product updated successfully",
-      result: { updatedProduct },
+      data: { updatedProduct },
     });
   };
 
@@ -79,7 +83,8 @@ export class AmazonServices implements IAmazonServices {
     const { url } = req.body as getProductDTO;
     // step: check product existence
     const product = await AmazonModel.findOne({ url });
-    if (!product) throw new ApplicationException("Product not found", 404);
-    return successHandler({ res, result: { product } });
+    if (!product)
+      throw new AppError(HttpStatusCode.NOT_FOUND, "Product not found");
+    return responseHandler({ res, data: { product } });
   };
 }

@@ -1,9 +1,9 @@
 import { NextFunction, Request, Response } from "express";
-import { ApplicationException } from "../utils/Errors";
-import { UserModel } from "../modules/user/user.model";
-import { PricingPlanEnum } from "../types/user.module.types";
+import { ApplicationException } from "../../utils/Errors";
+import { UserModel } from "../../modules/user/user.model";
+import { PricingPlanEnum } from "../../types/user.module.type";
 
-export const authPlans = (allowedPlans: string[], creditCost: number = 0) => {
+export const plan = (allowedPlans: string[], creditCost: number = 0) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     const user = res.locals.user;
     // step: make low plans allowed to top plans

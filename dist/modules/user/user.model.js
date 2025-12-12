@@ -37,7 +37,7 @@ exports.UserModel = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
 const bcrypt_1 = require("../../utils/bcrypt");
 const crypto_1 = require("../../utils/crypto");
-const user_module_types_1 = require("../../types/user.module.types");
+const user_module_type_1 = require("../../types/user.module.type");
 const userSchema = new mongoose_1.Schema({
     // personal info
     firstName: {
@@ -57,8 +57,8 @@ const userSchema = new mongoose_1.Schema({
     age: { type: Number, min: 18, max: 200 },
     gender: {
         type: String,
-        enum: Object.values(user_module_types_1.GenderEnum),
-        default: user_module_types_1.GenderEnum.MALE,
+        enum: Object.values(user_module_type_1.GenderEnum),
+        default: user_module_type_1.GenderEnum.MALE,
     },
     phone: {
         type: String,
@@ -68,8 +68,8 @@ const userSchema = new mongoose_1.Schema({
     },
     role: {
         type: String,
-        enum: Object.values(user_module_types_1.RoleEnum),
-        default: user_module_types_1.RoleEnum.USER,
+        enum: Object.values(user_module_type_1.RoleEnum),
+        default: user_module_type_1.RoleEnum.USER,
     },
     // auth and OTP
     email: { type: String, required: true, unique: true },
@@ -96,8 +96,8 @@ const userSchema = new mongoose_1.Schema({
     refundedAt: { type: Date },
     pricingPlan: {
         type: String,
-        enum: Object.values(user_module_types_1.PricingPlanEnum),
-        default: user_module_types_1.PricingPlanEnum.FREE,
+        enum: Object.values(user_module_type_1.PricingPlanEnum),
+        default: user_module_type_1.PricingPlanEnum.FREE,
     },
     avaliableCredits: { type: Number, default: 50 },
 }, { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } });

@@ -5,7 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.check2FAOTPSchema = exports.activeDeactive2FASchema = exports.changePasswordSchema = exports.forgetPasswordSchema = exports.updatePasswordSchema = exports.resendEmailOtpSchema = exports.updateEmailSchema = exports.confirmEmailSchema = exports.loginSchema = exports.registerSchema = void 0;
 const zod_1 = __importDefault(require("zod"));
-const user_module_types_1 = require("../../types/user.module.types");
+const user_module_type_1 = require("../../types/user.module.type");
 exports.registerSchema = zod_1.default
     .object({
     firstName: zod_1.default.string().min(3).max(50),
@@ -13,9 +13,9 @@ exports.registerSchema = zod_1.default
     email: zod_1.default.email(),
     password: zod_1.default.string(),
     age: zod_1.default.number().min(18).max(200).optional(),
-    gender: zod_1.default.literal([user_module_types_1.GenderEnum.MALE, user_module_types_1.GenderEnum.FEMALE]).optional(),
+    gender: zod_1.default.literal([user_module_type_1.GenderEnum.MALE, user_module_type_1.GenderEnum.FEMALE]).optional(),
     phone: zod_1.default.string().optional(),
-    role: zod_1.default.literal([user_module_types_1.RoleEnum.USER, user_module_types_1.RoleEnum.ADMIN]).optional(),
+    role: zod_1.default.literal([user_module_type_1.RoleEnum.USER, user_module_type_1.RoleEnum.ADMIN]).optional(),
 })
     .superRefine((args, ctx) => {
     if (args.phone) {

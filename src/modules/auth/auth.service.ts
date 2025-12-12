@@ -12,17 +12,19 @@ import {
   updateEmaiDTO,
   updatePasswordDTO,
 } from "./auth.dto";
-import { ApplicationException, NotValidEmail } from "../../utils/Errors";
+import { NotValidEmail } from "../../utils/Errors";
 import { HydratedDocument } from "mongoose";
 import { template } from "../../utils/sendEmail/generateHTML";
 import { createJwt } from "../../utils/jwt";
 import { createOtp } from "../../utils/createOtp";
-import { successHandler } from "../../utils/successHandler";
 import { compare } from "../../utils/bcrypt";
 import { sendEmail } from "../../utils/sendEmail/send.email";
 import { decodeToken, TokenTypesEnum } from "../../utils/decodeToken";
-import { IAuthServcies } from "../../types/auth.modules.types";
-import { IUser } from "../../types/user.module.types";
+import { IAuthServcies } from "../../types/auth.module.type";
+import { IUser } from "../../types/user.module.type";
+import { AppError } from "../../core/errors/app.error";
+import { responseHandler } from "../../core/handlers/response.handler";
+import { HttpStatusCode } from "../../core/http/http.status.code";
 
 export class AuthServices implements IAuthServcies {
   constructor() {}
@@ -51,7 +53,10 @@ export class AuthServices implements IAuthServcies {
       }),
     });
     if (!isEmailSended) {
-      throw new ApplicationException("Error while sending email", 400);
+      throw new AppError(
+        HttpStatusCode.BAD_REQUEST,
+        "Error while sending email"
+      );
     }
     // step: create new user
     const user: HydratedDocument<IUser> = await UserModel.create({
@@ -65,7 +70,10 @@ export class AuthServices implements IAuthServcies {
       },
     });
     if (!user) {
-      throw new ApplicationException("Creation failed", 500);
+      throw new AppError(
+        HttpStatusCode.INTERNAL_SERVER_ERROR,
+        "Creation failed"
+      );
     }
     // step: create token
     const accessToken = createJwt(
@@ -84,10 +92,11 @@ export class AuthServices implements IAuthServcies {
         jwtid: createOtp(),
       }
     );
-    return successHandler({
+    return responseHandler({
       res,
       message: "User created successfully",
-      result: { accessToken, refreshToken },
+      data: { accessToken, refreshToken },
+      status: 201,
     });
   };
 
@@ -101,15 +110,15 @@ export class AuthServices implements IAuthServcies {
     // step: check credentials
     const isUserExist = await UserModel.findOne({ email });
     if (!isUserExist) {
-      throw new ApplicationException("Invalid credentials", 404);
+      throw new AppError(HttpStatusCode.UNAUTHORIZED, "Invalid credentials");
     }
     const user = isUserExist;
     if (!(await compare(password, user.password))) {
-      throw new ApplicationException("Invalid credentials", 401);
+      throw new AppError(HttpStatusCode.UNAUTHORIZED, "Invalid credentials");
     }
     // step: check is 2FA active
     if (user.is2FAActive) {
-      // ->step: send email otp
+      // step: send email otp
       const otpCode = createOtp();
       const { isEmailSended, info } = await sendEmail({
         to: user.email,
@@ -121,9 +130,12 @@ export class AuthServices implements IAuthServcies {
         }),
       });
       if (!isEmailSended) {
-        throw new ApplicationException("Error while sending email", 400);
+        throw new AppError(
+          HttpStatusCode.BAD_REQUEST,
+          "Error while sending email"
+        );
       }
-      // ->step: update user
+      // step: update user
       const updatedUser = await UserModel.findOneAndUpdate(
         { _id: user._id },
         {
@@ -135,7 +147,7 @@ export class AuthServices implements IAuthServcies {
           },
         }
       );
-      return successHandler({
+      return responseHandler({
         res,
         message: "OTP sended to your email pleaze confirm it to login",
       });
@@ -157,10 +169,10 @@ export class AuthServices implements IAuthServcies {
         jwtid: createOtp(),
       }
     );
-    return successHandler({
+    return responseHandler({
       res,
       message: "Loggedin successfully",
-      result: { accessToken, refreshToken },
+      data: { accessToken, refreshToken },
     });
   };
 
@@ -173,7 +185,7 @@ export class AuthServices implements IAuthServcies {
     const authorization = req.headers.authorization;
     // step: check authorization
     if (!authorization) {
-      throw new ApplicationException("Authorization undefiend", 400);
+      throw new AppError(HttpStatusCode.BAD_REQUEST, "Authorization undefiend");
     }
     // step: decode authorization
     const { user, payload } = await decodeToken({
@@ -195,7 +207,7 @@ export class AuthServices implements IAuthServcies {
         jwtid,
       }
     );
-    return successHandler({ res, result: { accessToken } });
+    return responseHandler({ res, data: { accessToken } });
   };
 
   // ============================ confirmEmail ============================
@@ -208,14 +220,14 @@ export class AuthServices implements IAuthServcies {
     // step: check user exitance
     const user = await UserModel.findOne({ email });
     if (!user) {
-      throw new ApplicationException("User not found", 400);
+      throw new AppError(HttpStatusCode.BAD_REQUEST, "User not found");
     }
     // step: check emailOtp
     if (!(await compare(firstOtp, user.emailOtp.otp))) {
-      return successHandler({ res, message: "Invalid otp", status: 400 });
+      throw new AppError(HttpStatusCode.UNAUTHORIZED, "Invalid otp");
     }
     if (user.emailOtp.expiredAt < new Date(Date.now())) {
-      return successHandler({ res, message: "otp expired", status: 400 });
+      throw new AppError(HttpStatusCode.BAD_REQUEST, "otp expired");
     }
     // step: case 1 email not confrimed (confirm first email)
     if (!user.emailConfirmed) {
@@ -224,32 +236,28 @@ export class AuthServices implements IAuthServcies {
         { email: user.email },
         { $set: { emailConfirmed: new Date() } }
       );
-      return successHandler({ res, message: "Email confirmed successfully" });
+      return responseHandler({ res, message: "Email confirmed successfully" });
     }
     // step: case 2 email confrimed (confirm first and second email)
     // step: check secondOtp existence
     if (!secondOtp) {
-      return successHandler({
-        res,
-        message:
-          "Email already confirmed, if you want to update email please send firstOtp and secondOtp",
-        status: 400,
-      });
+      throw new AppError(
+        HttpStatusCode.BAD_REQUEST,
+        "Email already confirmed, if you want to update email please send firstOtp and secondOtp"
+      );
     }
     // step: check newEmailOtp
     if (!(await compare(secondOtp, user.newEmailOtp.otp))) {
-      return successHandler({
-        res,
-        message: "Invalid otp for second email",
-        status: 400,
-      });
+      throw new AppError(
+        HttpStatusCode.BAD_REQUEST,
+        "Invalid otp for second email"
+      );
     }
     if (user.newEmailOtp.expiredAt < new Date(Date.now())) {
-      return successHandler({
-        res,
-        message: "otp expired for second email",
-        status: 400,
-      });
+      throw new AppError(
+        HttpStatusCode.BAD_REQUEST,
+        "otp expired for second email"
+      );
     }
     // step: confirm email
     const newEmail = user.newEmail;
@@ -257,7 +265,7 @@ export class AuthServices implements IAuthServcies {
       { email: user.email },
       { $set: { email: newEmail } }
     );
-    return successHandler({
+    return responseHandler({
       res,
       message: "New email confirmed successfully",
     });
@@ -273,11 +281,10 @@ export class AuthServices implements IAuthServcies {
     const { newEmail }: updateEmaiDTO = req.body;
     // step: check if email confirmed
     if (!user.emailConfirmed) {
-      return successHandler({
-        res,
-        message: "Please confirm email to update it",
-        status: 400,
-      });
+      throw new AppError(
+        HttpStatusCode.BAD_REQUEST,
+        "Please confirm email to update it"
+      );
     }
     // step: send otp to current email
     const otpCodeForCurrentEmail = createOtp();
@@ -291,11 +298,10 @@ export class AuthServices implements IAuthServcies {
       }),
     });
     if (!isEmailSended) {
-      return successHandler({
-        res,
-        message: "Error while checking email",
-        status: 400,
-      });
+      throw new AppError(
+        HttpStatusCode.BAD_REQUEST,
+        "Error while checking email"
+      );
     }
     // step: send otp to new email
     const otpCodeForNewEmail = createOtp();
@@ -309,11 +315,10 @@ export class AuthServices implements IAuthServcies {
       }),
     });
     if (!resultOfSendEmail.isEmailSended) {
-      return successHandler({
-        res,
-        message: "Error while checking email",
-        status: 400,
-      });
+      throw new AppError(
+        HttpStatusCode.BAD_REQUEST,
+        "Error while checking email"
+      );
     }
     // step: save emailOtp, newEmail and newEmailOtp
     const updatedUser = await UserModel.findOneAndUpdate(
@@ -338,7 +343,7 @@ export class AuthServices implements IAuthServcies {
       }
     );
 
-    return successHandler({
+    return responseHandler({
       res,
       message:
         "OTP sended for current email and new email, please confirm new email to save updates",
@@ -355,12 +360,15 @@ export class AuthServices implements IAuthServcies {
     // step: check email existence
     const isUserExist = await UserModel.findOne({ email });
     if (!isUserExist) {
-      throw new ApplicationException("User not found", 404);
+      throw new AppError(HttpStatusCode.NOT_FOUND, "User not found");
     }
     const user = isUserExist;
     // step: check if email otp not expired yet
     if (user.emailOtp?.expiredAt > new Date(Date.now())) {
-      throw new ApplicationException("Your OTP not expired yet", 400);
+      throw new AppError(
+        HttpStatusCode.BAD_REQUEST,
+        "Your OTP not expired yet"
+      );
     }
     // step: send email otp
     const otpCode = createOtp();
@@ -374,7 +382,10 @@ export class AuthServices implements IAuthServcies {
       }),
     });
     if (!isEmailSended) {
-      throw new ApplicationException("Error while sending email", 400);
+      throw new AppError(
+        HttpStatusCode.BAD_REQUEST,
+        "Error while sending email"
+      );
     }
     // step: update emailOtp
     const updatedUset = await UserModel.findOneAndUpdate(
@@ -393,7 +404,7 @@ export class AuthServices implements IAuthServcies {
         context: "query",
       }
     );
-    return successHandler({ res, message: "OTP sended successfully" });
+    return responseHandler({ res, message: "OTP sended successfully" });
   };
 
   // ============================ updatePassword ============================
@@ -406,13 +417,13 @@ export class AuthServices implements IAuthServcies {
     const { currentPassword, newPassword }: updatePasswordDTO = req.body;
     // step: check password correction
     if (!(await compare(currentPassword, user.password))) {
-      throw new ApplicationException("Invalid credentials", 401);
+      throw new AppError(HttpStatusCode.UNAUTHORIZED, "Invalid credentials");
     }
     // step: check newPassword not equal currentPassword
     if (await compare(newPassword, user.password)) {
-      throw new ApplicationException(
-        "You can not make new password equal to old password",
-        400
+      throw new AppError(
+        HttpStatusCode.BAD_REQUEST,
+        "You can not make new password equal to old password"
       );
     }
     // step: update password and credentialsChangedAt
@@ -430,7 +441,7 @@ export class AuthServices implements IAuthServcies {
         context: "query",
       }
     );
-    return successHandler({
+    return responseHandler({
       res,
       message: "Password updated successfully, please login again",
     });
@@ -446,12 +457,15 @@ export class AuthServices implements IAuthServcies {
     // step: check email existence
     const isUserExist = await UserModel.findOne({ email });
     if (!isUserExist) {
-      throw new ApplicationException("User not found", 404);
+      throw new AppError(HttpStatusCode.NOT_FOUND, "User not found");
     }
     const user = isUserExist;
     // step: check if password otp not expired yet
     if (user.passwordOtp?.expiredAt > new Date(Date.now())) {
-      throw new ApplicationException("Your OTP not expired yet", 400);
+      throw new AppError(
+        HttpStatusCode.BAD_REQUEST,
+        "Your OTP not expired yet"
+      );
     }
     // step: send email otp
     const otpCode = createOtp();
@@ -466,7 +480,10 @@ export class AuthServices implements IAuthServcies {
       }),
     });
     if (!isEmailSended) {
-      throw new ApplicationException("Error while sending email", 400);
+      throw new AppError(
+        HttpStatusCode.BAD_REQUEST,
+        "Error while sending email"
+      );
     }
     // step: update passwordOtp
     const updatedUser = await UserModel.findOneAndUpdate(
@@ -485,7 +502,7 @@ export class AuthServices implements IAuthServcies {
         context: "query",
       }
     );
-    return successHandler({
+    return responseHandler({
       res,
       message: "OTP sended to email, please use it to restart your password",
     });
@@ -501,12 +518,12 @@ export class AuthServices implements IAuthServcies {
     // step: check email existence
     const isUserExist = await UserModel.findOne({ email });
     if (!isUserExist) {
-      throw new ApplicationException("User not found", 404);
+      throw new AppError(HttpStatusCode.NOT_FOUND, "User not found");
     }
     const user = isUserExist;
     // step: check otp
     if (!(await compare(otp, user.passwordOtp.otp))) {
-      throw new ApplicationException("Invalid OTP", 400);
+      throw new AppError(HttpStatusCode.BAD_REQUEST, "Invalid OTP");
     }
     // step: change password
     const updatedUser = await UserModel.findOneAndUpdate(
@@ -522,7 +539,7 @@ export class AuthServices implements IAuthServcies {
         context: "query",
       }
     );
-    return successHandler({
+    return responseHandler({
       res,
       message: "Password changed successfully, You have to login",
     });
@@ -547,7 +564,10 @@ export class AuthServices implements IAuthServcies {
       }),
     });
     if (!isEmailSended) {
-      throw new ApplicationException("Error while sending email", 400);
+      throw new AppError(
+        HttpStatusCode.BAD_REQUEST,
+        "Error while sending email"
+      );
     }
     // step: save OTP
     const updatedUser = await UserModel.findOneAndUpdate(
@@ -566,7 +586,7 @@ export class AuthServices implements IAuthServcies {
         context: "query",
       }
     );
-    return successHandler({
+    return responseHandler({
       res,
       message: "OTP sended to your email plz confirm it to active 2FA",
     });
@@ -591,17 +611,17 @@ export class AuthServices implements IAuthServcies {
           context: "query",
         }
       );
-      return successHandler({ res, message: "2FA disabled successfully" });
+      return responseHandler({ res, message: "2FA disabled successfully" });
     }
     // step: check otp value
     if (!user?.otp2FA?.otp) {
-      throw new ApplicationException("OTP not correct", 400);
+      throw new AppError(HttpStatusCode.BAD_REQUEST, "OTP not correct");
     }
     if (!(await compare(otp, user?.otp2FA?.otp))) {
-      throw new ApplicationException("OTP not correct", 400);
+      throw new AppError(HttpStatusCode.BAD_REQUEST, "OTP not correct");
     }
     if (user?.otp2FA?.expiredAt < new Date(Date.now())) {
-      throw new ApplicationException("OTP expired", 400);
+      throw new AppError(HttpStatusCode.BAD_REQUEST, "OTP expired");
     }
     // step: update 2fa
     const updatedUser = await UserModel.findOneAndUpdate(
@@ -613,7 +633,7 @@ export class AuthServices implements IAuthServcies {
         context: "query",
       }
     );
-    return successHandler({ res, message: "2FA enabled successfully" });
+    return responseHandler({ res, message: "2FA enabled successfully" });
   };
 
   // ============================ check2FAOTP ============================
@@ -626,10 +646,10 @@ export class AuthServices implements IAuthServcies {
     const user = await UserModel.findOne({ _id: userId });
     // step: check OTP
     if (!user?.otp2FA?.otp) {
-      throw new ApplicationException("Invalid credentials", 400);
+      throw new AppError(HttpStatusCode.UNAUTHORIZED, "Invalid credentials");
     }
     if (!(await compare(otp, user?.otp2FA?.otp))) {
-      throw new ApplicationException("Invalid credentials", 400);
+      throw new AppError(HttpStatusCode.UNAUTHORIZED, "Invalid credentials");
     }
     // step: create token
     const accessToken = createJwt(
@@ -648,10 +668,10 @@ export class AuthServices implements IAuthServcies {
         jwtid: createOtp(),
       }
     );
-    return successHandler({
+    return responseHandler({
       res,
       message: "Loggedin successfully",
-      result: { accessToken, refreshToken },
+      data: { accessToken, refreshToken },
     });
   };
 
@@ -676,7 +696,7 @@ export class AuthServices implements IAuthServcies {
         context: "query",
       }
     );
-    return successHandler({
+    return responseHandler({
       res,
       message: "Logged out successfully",
     });

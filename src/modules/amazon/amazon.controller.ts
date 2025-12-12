@@ -1,7 +1,7 @@
 import { Router } from "express";
-import { auth } from "../../middlewares/auth.middleware";
+import { auth } from "../../core/middlewares/auth.middleware";
 import { AmazonServices } from "./amazon.service";
-import { validation } from "../../middlewares/validation.middleware";
+import { validation } from "../../core/middlewares/validation.middleware";
 import {
   addProductSchema,
   getProductSchema,
@@ -10,23 +10,8 @@ import {
 const router = Router();
 const amazonServices = new AmazonServices();
 
-router.post(
-  "/add-product",
-  auth,
-  validation(addProductSchema),
-  amazonServices.addProduct
-);
-router.patch(
-  "/update-product",
-  auth,
-  validation(updateProductSchema),
-  amazonServices.updateProduct
-);
-router.get(
-  "/get-product",
-  auth,
-  validation(getProductSchema),
-  amazonServices.getProduct
-);
+router.post("/add-product",auth,validation(addProductSchema),amazonServices.addProduct);
+router.patch("/update-product",auth,validation(updateProductSchema),amazonServices.updateProduct);
+router.get("/get-product",auth,validation(getProductSchema),amazonServices.getProduct);
 
 export default router;
