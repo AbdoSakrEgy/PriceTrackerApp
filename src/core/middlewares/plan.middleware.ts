@@ -1,7 +1,8 @@
 import { NextFunction, Request, Response } from "express";
-import { ApplicationException } from "../../utils/Errors";
 import { UserModel } from "../../modules/user/user.model";
 import { PricingPlanEnum } from "../../types/user.module.type";
+import { AppError } from "../errors/app.error";
+import { HttpStatusCode } from "../http/http.status.code";
 
 export const plan = (allowedPlans: string[], creditCost: number = 0) => {
   return async (req: Request, res: Response, next: NextFunction) => {
@@ -17,17 +18,17 @@ export const plan = (allowedPlans: string[], creditCost: number = 0) => {
     // step: check user plan
     const userPricingPlan = user.pricingPlan;
     if (!allowedPlans.includes(userPricingPlan)) {
-      throw new ApplicationException(
-        "Please upgrade your plan to access this API",
-        401
+      throw new AppError(
+        HttpStatusCode.FORBIDDEN,
+        "Please upgrade your plan to access this API"
       );
     }
     // step: check credits cost
     const userAvaliableCredits = user.avaliableCredits;
     if (creditCost > userAvaliableCredits) {
-      throw new ApplicationException(
-        "Your credit not enough to access this API",
-        400
+      throw new AppError(
+        HttpStatusCode.BAD_REQUEST,
+        "Your credit not enough to access this API"
       );
     }
     // step: calculate new credits

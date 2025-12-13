@@ -5,7 +5,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.amazonAISearcher = void 0;
 const puppeteer_core_1 = __importDefault(require("puppeteer-core"));
-const Errors_1 = require("../Errors");
+const app_error_1 = require("../../core/errors/app.error");
+const http_status_code_1 = require("../../core/http/http.status.code");
 const amazonAISearcher = async () => {
     let browser;
     try {
@@ -60,7 +61,7 @@ const amazonAISearcher = async () => {
         // Remove duplicates
         const uniqueUrls = [...new Set(productUrls)];
         if (uniqueUrls.length === 0) {
-            throw new Errors_1.ApplicationException("No product URLs found on Amazon New Releases page", 404);
+            throw new app_error_1.AppError(http_status_code_1.HttpStatusCode.NOT_FOUND, "No product URLs found on Amazon New Releases page");
         }
         return uniqueUrls;
     }
@@ -68,7 +69,7 @@ const amazonAISearcher = async () => {
         if (browser) {
             await browser.close();
         }
-        throw new Errors_1.ApplicationException(`Error searching Amazon products: ${error instanceof Error ? error.message : error}`, 500);
+        throw new app_error_1.AppError(http_status_code_1.HttpStatusCode.INTERNAL_SERVER_ERROR, `Error searching Amazon products: ${error instanceof Error ? error.message : error}`);
     }
 };
 exports.amazonAISearcher = amazonAISearcher;

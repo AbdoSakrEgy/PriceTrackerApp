@@ -8,7 +8,8 @@ exports.createCoupon = createCoupon;
 exports.createRefund = createRefund;
 exports.retrievePaymentIntent = retrievePaymentIntent;
 const stripe_1 = __importDefault(require("stripe"));
-const Errors_1 = require("../Errors");
+const app_error_1 = require("../../core/errors/app.error");
+const http_status_code_1 = require("../../core/http/http.status.code");
 let stripe = null;
 function getStripeInstance() {
     if (!stripe) {
@@ -20,7 +21,7 @@ function getStripeInstance() {
     }
     return stripe;
 }
-// createCheckoutSession
+// ============================ createCheckoutSession ============================
 async function createCheckoutSession({ success_url = process.env.SUCCESS_URL, cancel_url = process.env.CANCEL_URL, mode = "payment", discounts = [], metadata = {}, line_items, customer_email, }) {
     const stripeInstance = getStripeInstance();
     const session = await stripeInstance.checkout.sessions.create({
@@ -34,24 +35,24 @@ async function createCheckoutSession({ success_url = process.env.SUCCESS_URL, ca
     });
     return session;
 }
-// createCoupon
+// ============================ createCoupon ============================
 async function createCoupon(data) {
     const stripeInstance = getStripeInstance();
     const coupon = await stripeInstance.coupons.create(data);
     return coupon;
 }
-// createRefund
+// ============================ createRefund ============================
 async function createRefund(id) {
     const stripeInstance = getStripeInstance();
     const paymentIntent = await retrievePaymentIntent(id);
     if (!paymentIntent)
-        throw new Errors_1.ApplicationException("Invalid paymentIntent id", 404);
+        throw new app_error_1.AppError(http_status_code_1.HttpStatusCode.NOT_FOUND, "Invalid paymentIntent id");
     const refund = await stripeInstance.refunds.create({
         payment_intent: id,
     });
     return refund;
 }
-// retrievePaymentIntent
+// ============================ retrievePaymentIntent ============================
 async function retrievePaymentIntent(id) {
     const stripeInstance = getStripeInstance();
     const paymentIntent = await stripeInstance.paymentIntents.retrieve(id);

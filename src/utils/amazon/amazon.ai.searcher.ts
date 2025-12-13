@@ -1,5 +1,6 @@
 import puppeteer from "puppeteer-core";
-import { ApplicationException } from "../Errors";
+import { AppError } from "../../core/errors/app.error";
+import { HttpStatusCode } from "../../core/http/http.status.code";
 
 export const amazonAISearcher = async (): Promise<string[]> => {
   let browser;
@@ -74,9 +75,9 @@ export const amazonAISearcher = async (): Promise<string[]> => {
     const uniqueUrls = [...new Set(productUrls)];
 
     if (uniqueUrls.length === 0) {
-      throw new ApplicationException(
-        "No product URLs found on Amazon New Releases page",
-        404
+      throw new AppError(
+        HttpStatusCode.NOT_FOUND,
+        "No product URLs found on Amazon New Releases page"
       );
     }
 
@@ -85,11 +86,11 @@ export const amazonAISearcher = async (): Promise<string[]> => {
     if (browser) {
       await browser.close();
     }
-    throw new ApplicationException(
+    throw new AppError(
+      HttpStatusCode.INTERNAL_SERVER_ERROR,
       `Error searching Amazon products: ${
         error instanceof Error ? error.message : error
-      }`,
-      500
+      }`
     );
   }
 };

@@ -9,10 +9,11 @@ const path_1 = __importDefault(require("path"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const routes_1 = __importDefault(require("./routes"));
 const db_connection_1 = require("./DB/db.connection");
-const Errors_1 = require("./utils/Errors");
 const cors_1 = __importDefault(require("cors"));
 const error_middleware_1 = require("./core/middlewares/error.middleware");
 const express_rate_limit_1 = require("express-rate-limit");
+const app_error_1 = require("./core/errors/app.error");
+const http_status_code_1 = require("./core/http/http.status.code");
 const app = (0, express_1.default)();
 exports.app = app;
 dotenv_1.default.config({
@@ -25,7 +26,7 @@ var corsOptions = {
             callback(null, true);
         }
         else {
-            callback(new Errors_1.ApplicationException("Not allowed by CORS", 401));
+            callback(new app_error_1.AppError(http_status_code_1.HttpStatusCode.NOT_FOUND, "Not allowed by CORS"));
         }
     },
 };

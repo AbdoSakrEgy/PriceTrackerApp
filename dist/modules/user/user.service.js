@@ -1,162 +1,196 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.UserServices = void 0;
-const user_model_1 = require("./user.model");
-const response_handler_1 = require("../../core/handlers/response.handler");
-const user_module_type_1 = require("../../types/user.module.type");
-const cloudinary_service_1 = require("../../utils/cloudinary/cloudinary.service");
-const stripe_service_1 = require("../../utils/stripe/stripe.service");
+exports.UserService = void 0;
+const S3_services_1 = require("../../utils/S3-AWS/S3.services");
+const multer_type_1 = require("../../types/multer.type");
+const util_1 = require("util");
+const stream_1 = require("stream");
 const app_error_1 = require("../../core/errors/app.error");
 const http_status_code_1 = require("../../core/http/http.status.code");
-class UserServices {
-    userModel = user_model_1.UserModel;
+const user_model_1 = require("./user.model");
+const response_handler_1 = require("../../core/handlers/response.handler");
+const user_validation_1 = require("./user.validation");
+const createS3WriteStreamPipe = (0, util_1.promisify)(stream_1.pipeline);
+class UserService {
     constructor() { }
     // ============================ userProfile ============================
     userProfile = async (req, res, next) => {
         let user = res.locals.user;
-        const userId = req.params?.userId;
-        // step: if userId existence load that user
+        let userId = req.params?.userId;
+        // step: if userId existence
         if (userId) {
-            const foundUser = await this.userModel.findById(userId);
-            if (!foundUser) {
-                throw new app_error_1.AppError(http_status_code_1.HttpStatusCode.NOT_FOUND, "User not found");
-            }
-            user = foundUser;
+            user = await user_model_1.UserModel.findOne({ _id: userId });
         }
+        userId = user._id;
         return (0, response_handler_1.responseHandler)({ res, data: { user } });
     };
     // ============================ uploadProfileImage ============================
     uploadProfileImage = async (req, res, next) => {
         const user = res.locals.user;
-        const file = req.file;
-        if (!file) {
-            throw new app_error_1.AppError(http_status_code_1.HttpStatusCode.BAD_REQUEST, "profileImage is required");
-        }
-        const uploadResult = await (0, cloudinary_service_1.uploadSingleFile)({
-            fileLocation: file.path,
-            storagePathOnCloudinary: `users/${user._id}/profile`,
+        // step: validate multipart/form-data req
+        const parsed = user_validation_1.uploadProfileImageSchema.safeParse({
+            ...req.body,
+            profileImage: req.file,
         });
-        const updatedUser = await this.userModel.findOneAndUpdate({ _id: user._id }, { $set: { profileImage: uploadResult } }, { new: true });
+        if (!parsed.success) {
+            const errors = parsed.error.issues
+                .map((e) => `${e.path.join(".")}: ${e.message}`)
+                .join("; ");
+            throw new app_error_1.AppError(http_status_code_1.HttpStatusCode.BAD_REQUEST, errors);
+        }
+        // step: upload image
+        const Key = await (0, S3_services_1.uploadSingleSmallFileS3)({
+            dest: `users/${user._id}/profileImage`,
+            fileFromMulter: req.file,
+        });
+        // step: update user
+        const updatedUser = await user_model_1.UserModel.findOneAndUpdate({ _id: user._id }, { $set: { profileImage: Key } });
         return (0, response_handler_1.responseHandler)({
             res,
-            message: "Profile image updated successfully",
-            data: { user: updatedUser },
+            message: "Profile image uploaded successfully",
+            data: { Key },
         });
     };
-    // ============================ deleteProfileImage ============================
-    deleteProfileImage = async (req, res, next) => {
+    // ============================ uploadProfileVideo ============================
+    uploadProfileVideo = async (req, res, next) => {
         const user = res.locals.user;
-        const currentUser = await this.userModel.findById(user._id);
-        if (currentUser?.profileImage?.public_id) {
-            await (0, cloudinary_service_1.destroySingleFile)({
-                public_id: currentUser.profileImage.public_id,
-            });
+        // step: validate multipart/form-data req
+        const parsed = user_validation_1.uploadProfileVideoSchema.safeParse({
+            ...req.body,
+            profileVideo: req.file,
+        });
+        if (!parsed.success) {
+            const errors = parsed.error.issues
+                .map((e) => `${e.path.join(".")}: ${e.message}`)
+                .join("; ");
+            throw new app_error_1.AppError(http_status_code_1.HttpStatusCode.BAD_REQUEST, errors);
         }
-        const updatedUser = await this.userModel.findOneAndUpdate({ _id: user._id }, { $unset: { profileImage: "" } }, { new: true });
+        // step: upload video
+        const Key = await (0, S3_services_1.uploadSingleLargeFileS3)({
+            dest: `users/${user._id}/profileVideo`,
+            fileFromMulter: req.file,
+            storeIn: multer_type_1.StoreInEnum.DISK,
+        });
+        // step: update user
+        const updatedUser = await user_model_1.UserModel.findOneAndUpdate({ _id: user._id }, { $set: { profileVideo: Key } });
         return (0, response_handler_1.responseHandler)({
             res,
-            message: "Profile image deleted successfully",
-            data: { user: updatedUser },
+            message: "Profile video uploaded successfully",
+            data: { Key },
+        });
+    };
+    // ============================ uploadAvatarImage ============================
+    uploadAvatarImage = async (req, res, next) => {
+        const user = res.locals.user;
+        const { fileName, fileType } = req.body;
+        // step: upload image
+        const { url, Key } = await (0, S3_services_1.createPreSignedUrlToUploadFileS3)({
+            dest: `users/${user._id}/avatarImage`,
+            fileName,
+            ContentType: fileType,
+        });
+        // step: update user
+        const updatedUser = await user_model_1.UserModel.findOneAndUpdate({ _id: user._id }, { $set: { avatarImage: Key } });
+        return (0, response_handler_1.responseHandler)({
+            res,
+            message: "Use url to upload your image by using it as API with PUT method",
+            data: { url, Key },
+        });
+    };
+    // ============================ uploadCoverImages ============================
+    uploadCoverImages = async (req, res, next) => {
+        const user = res.locals.user;
+        // step: validate multipart/form-data req
+        const parsed = user_validation_1.uploadCoverImagesSchema.safeParse({
+            ...req.body,
+            coverImages: req.files,
+        });
+        if (!parsed.success) {
+            const errors = parsed.error.issues
+                .map((e) => `${e.path.join(".")}: ${e.message}`)
+                .join("; ");
+            throw new app_error_1.AppError(http_status_code_1.HttpStatusCode.BAD_REQUEST, errors);
+        }
+        // step: upload images
+        const Keys = await (0, S3_services_1.uploadMultiFilesS3)({
+            filesFromMulter: req.files,
+            dest: `users/${user._id}/coverImages`,
+        });
+        // step: update user
+        const updatedUser = await user_model_1.UserModel.findOneAndUpdate({ _id: user._id }, { $set: { coverImages: Keys } });
+        return (0, response_handler_1.responseHandler)({
+            res,
+            message: "Cover images uploaded successfully",
+            data: { Keys },
+        });
+    };
+    // ============================ getFile ============================
+    getFile = async (req, res, next) => {
+        const { downloadName } = req.query;
+        const path = req.params.path;
+        const Key = path.join("/");
+        const fileObject = await (0, S3_services_1.getFileS3)({ Key });
+        if (!fileObject?.Body) {
+            throw new app_error_1.AppError(http_status_code_1.HttpStatusCode.BAD_REQUEST, "Failed to get file");
+        }
+        res.setHeader("Content-Type", `${fileObject.ContentType}` || "application/octet-stream");
+        if (downloadName) {
+            res.setHeader("Content-Disposition", `attachment; filename=${downloadName}`);
+        }
+        return await createS3WriteStreamPipe(fileObject.Body, res);
+    };
+    // ============================ createPresignedUrlToGetFile ============================
+    createPresignedUrlToGetFile = async (req, res, next) => {
+        const { download = false, downloadName = "dumy", } = req.body;
+        const path = req.params.path;
+        const Key = path.join("/");
+        const url = await (0, S3_services_1.createPresignedUrlToGetFileS3)({
+            Key,
+            download,
+            downloadName,
+        });
+        return (0, response_handler_1.responseHandler)({
+            res,
+            message: "Use this URL to get file",
+            data: { url },
+        });
+    };
+    // ============================ deleteFile ============================
+    deleteFile = async (req, res, next) => {
+        const path = req.params.path;
+        const Key = path.join("/");
+        const result = await (0, S3_services_1.deleteFileS3)({ Key });
+        return (0, response_handler_1.responseHandler)({
+            res,
+            message: "File deleted successfully",
+        });
+    };
+    // ============================ deleteMultiFiles ============================
+    deleteMultiFiles = async (req, res, next) => {
+        const { Keys, Quiet = false } = req.body;
+        const result = await (0, S3_services_1.deleteMultiFilesS3)({ Keys, Quiet });
+        return (0, response_handler_1.responseHandler)({
+            res,
+            message: "Files deleted successfully",
         });
     };
     // ============================ updateBasicInfo ============================
     updateBasicInfo = async (req, res, next) => {
         const user = res.locals.user;
         const { firstName, lastName, age, gender, phone } = req.body;
-        const updatedUser = await this.userModel.findOneAndUpdate({ _id: user._id }, {
-            $set: {
-                ...(firstName && { firstName }),
-                ...(lastName && { lastName }),
-                ...(age !== undefined && { age }),
-                ...(gender && { gender }),
-                ...(phone && { phone }),
-            },
-        }, {
-            new: true,
-            runValidators: true,
-            context: "query",
+        // step: update basic info
+        const updatedUser = await user_model_1.UserModel.findOneAndUpdate({
+            filter: { _id: user._id },
+            data: { $set: { firstName, lastName, age, gender, phone } },
         });
-        return (0, response_handler_1.responseHandler)({
-            res,
-            message: "Basic info updated successfully",
-            data: { user: updatedUser },
-        });
-    };
-    // ============================ payWithStripe ============================
-    payWithStripe = async (req, res, next) => {
-        const user = res.locals.user;
-        const { plan, userCoupon } = req.body;
-        // step: check coupon validation
-        let checkCoupon = undefined;
-        if (userCoupon) {
-            const allowedCoupons = [
-                { code: "ADF-DFA-31-DA", offer: 15 },
-                { code: "JMY-GHR-65-CS", offer: 30 },
-            ];
-            checkCoupon = allowedCoupons.filter((item) => item.code == userCoupon)[0];
-            if (!checkCoupon) {
-                throw new app_error_1.AppError(http_status_code_1.HttpStatusCode.BAD_REQUEST, "Invalid coupon");
-            }
-        }
-        // step: calculate plan price
-        let costAmount = 0;
-        if (plan == user_module_type_1.PricingPlanEnum.BASIC) {
-            costAmount = 50;
-        }
-        if (plan == user_module_type_1.PricingPlanEnum.PRO) {
-            costAmount = 100;
-        }
-        // step: collect createCheckoutSession data
-        const line_items = [
-            {
-                price_data: {
-                    currency: "egp",
-                    product_data: {
-                        name: `${user.firstName} will subscripe to ${plan} plan`,
-                        description: "plan description",
-                    },
-                    unit_amount: costAmount * 100,
-                },
-                quantity: 1,
-            },
-        ];
-        const discounts = [];
-        if (checkCoupon) {
-            const coupon = await (0, stripe_service_1.createCoupon)({
-                duration: "once",
-                currency: "egp",
-                percent_off: checkCoupon.offer,
+        if (!updatedUser) {
+            return (0, response_handler_1.responseHandler)({
+                res,
+                message: "Error while update user",
+                status: 500,
             });
-            discounts.push({ coupon: coupon.id });
         }
-        // step: apply stripe services
-        // createCheckoutSession
-        const checkoutSession = await (0, stripe_service_1.createCheckoutSession)({
-            customer_email: user.email,
-            line_items,
-            mode: "payment",
-            discounts,
-            metadata: { userId: user._id.toString(), plan },
-        });
-        // Store the checkout session ID for reference
-        user.checkoutSessionId = checkoutSession.id;
-        await user.save();
-        return (0, response_handler_1.responseHandler)({ res, data: { checkoutSession } });
-    };
-    // ============================ webHookWithStripe ============================
-    webHookWithStripe = async (req, res, next) => {
-        const { userId, plan } = req.body.data.object.metadata;
-        // step: check order existence
-        const user = await user_model_1.UserModel.findOneAndUpdate({ _id: userId }, {
-            $set: {
-                paymentIntentId: req.body.data.object.payment_intent,
-                pricingPlan: plan,
-                avaliableCredits: 200,
-            },
-        });
-        if (!user)
-            throw new app_error_1.AppError(http_status_code_1.HttpStatusCode.NOT_FOUND, "User not found");
-        return (0, response_handler_1.responseHandler)({ res, message: "webHookWithStripe done" });
+        return (0, response_handler_1.responseHandler)({ res, message: "User updated successfully" });
     };
 }
-exports.UserServices = UserServices;
+exports.UserService = UserService;

@@ -6,13 +6,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.amazonAIExtractor = void 0;
 const puppeteer_core_1 = __importDefault(require("puppeteer-core"));
 const generative_ai_1 = require("@google/generative-ai");
-const Errors_1 = require("../Errors");
+const app_error_1 = require("../../core/errors/app.error");
+const http_status_code_1 = require("../../core/http/http.status.code");
 const amazonAIExtractor = async (url) => {
     let browser;
     try {
         // Validate URL
         if (!url || !url.includes("amazon")) {
-            throw new Errors_1.ApplicationException("Invalid Amazon URL", 400);
+            throw new app_error_1.AppError(http_status_code_1.HttpStatusCode.BAD_REQUEST, "Invalid Amazon URL");
         }
         // Launch browser
         browser = await puppeteer_core_1.default.launch({
@@ -54,7 +55,7 @@ const amazonAIExtractor = async (url) => {
         if (browser) {
             await browser.close();
         }
-        throw new Errors_1.ApplicationException(`Error extracting Amazon product data: ${error instanceof Error ? error.message : error}`, 500);
+        throw new app_error_1.AppError(http_status_code_1.HttpStatusCode.INTERNAL_SERVER_ERROR, `Error extracting Amazon product data: ${error instanceof Error ? error.message : error}`);
     }
 };
 exports.amazonAIExtractor = amazonAIExtractor;
@@ -101,7 +102,7 @@ const extractDataFromScreenshot = async (base64Image) => {
         // Extract JSON
         const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
         if (!jsonMatch) {
-            throw new Errors_1.ApplicationException("Could not parse AI response as JSON", 500);
+            throw new app_error_1.AppError(http_status_code_1.HttpStatusCode.INTERNAL_SERVER_ERROR, "Could not parse AI response as JSON");
         }
         const extractedData = JSON.parse(jsonMatch[0]);
         // Validate and structure the data
@@ -138,7 +139,7 @@ const extractDataFromScreenshot = async (base64Image) => {
         return productData;
     }
     catch (error) {
-        throw new Errors_1.ApplicationException(`Error processing screenshot with AI: ${error instanceof Error ? error.message : error}`, 500);
+        throw new app_error_1.AppError(http_status_code_1.HttpStatusCode.INTERNAL_SERVER_ERROR, `Error processing screenshot with AI: ${error instanceof Error ? error.message : error}`);
     }
 };
 // Usage example:

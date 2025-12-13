@@ -1,6 +1,7 @@
 import puppeteer from "puppeteer-core";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { ApplicationException } from "../Errors";
+import { AppError } from "../../core/errors/app.error";
+import { HttpStatusCode } from "../../core/http/http.status.code";
 
 interface IAmazonProductData {
   title: string;
@@ -23,7 +24,7 @@ export const amazonAIExtractor = async (
   try {
     // Validate URL
     if (!url || !url.includes("amazon")) {
-      throw new ApplicationException("Invalid Amazon URL", 400);
+      throw new AppError(HttpStatusCode.BAD_REQUEST, "Invalid Amazon URL");
     }
 
     // Launch browser
@@ -81,11 +82,11 @@ export const amazonAIExtractor = async (
     if (browser) {
       await browser.close();
     }
-    throw new ApplicationException(
+    throw new AppError(
+      HttpStatusCode.INTERNAL_SERVER_ERROR,
       `Error extracting Amazon product data: ${
         error instanceof Error ? error.message : error
-      }`,
-      500
+      }`
     );
   }
 };
@@ -142,9 +143,9 @@ const extractDataFromScreenshot = async (
     const jsonMatch = cleanText.match(/\{[\s\S]*\}/);
 
     if (!jsonMatch) {
-      throw new ApplicationException(
-        "Could not parse AI response as JSON",
-        500
+      throw new AppError(
+        HttpStatusCode.INTERNAL_SERVER_ERROR,
+        "Could not parse AI response as JSON"
       );
     }
 
@@ -185,11 +186,11 @@ const extractDataFromScreenshot = async (
 
     return productData;
   } catch (error) {
-    throw new ApplicationException(
+    throw new AppError(
+      HttpStatusCode.INTERNAL_SERVER_ERROR,
       `Error processing screenshot with AI: ${
         error instanceof Error ? error.message : error
-      }`,
-      500
+      }`
     );
   }
 };

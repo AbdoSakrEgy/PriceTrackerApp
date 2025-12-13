@@ -3,11 +3,12 @@ import path from "path";
 import dotenv from "dotenv";
 import router from "./routes";
 import { connectDB } from "./DB/db.connection";
-import { ApplicationException, IError } from "./utils/Errors";
 import cors from "cors";
 import { errorMiddleware } from "./core/middlewares/error.middleware";
 import { rateLimit } from "express-rate-limit";
 import { logger } from "./config/logger.config";
+import { AppError } from "./core/errors/app.error";
+import { HttpStatusCode } from "./core/http/http.status.code";
 
 const app = express();
 dotenv.config({
@@ -19,7 +20,7 @@ var corsOptions = {
     if (whitelist.indexOf(origin) !== -1) {
       callback(null, true);
     } else {
-      callback(new ApplicationException("Not allowed by CORS", 401));
+      callback(new AppError(HttpStatusCode.NOT_FOUND, "Not allowed by CORS"));
     }
   },
 };

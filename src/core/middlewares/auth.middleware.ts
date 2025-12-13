@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { decodeToken, TokenTypesEnum } from "../../utils/decodeToken.js";
-import { ApplicationException } from "../../utils/Errors.js";
+import { AppError } from "../errors/app.error.js";
+import { HttpStatusCode } from "../http/http.status.code.js";
 
 export const auth = async (
   req: Request | any,
@@ -10,7 +11,10 @@ export const auth = async (
   // step: check authorization
   const { authorization } = req.headers;
   if (!authorization) {
-    throw new ApplicationException("Authorization is required", 400);
+    throw new AppError(
+      HttpStatusCode.UNAUTHORIZED,
+      "Authorization is required"
+    );
   }
   const { user, payload } = await decodeToken({
     authorization,

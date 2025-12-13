@@ -19,13 +19,13 @@ import { createOtp } from "../../utils/createOtp";
 import { compare } from "../../utils/bcrypt";
 import { sendEmail } from "../../utils/sendEmail/send.email";
 import { decodeToken, TokenTypesEnum } from "../../utils/decodeToken";
-import { IAuthServcies } from "../../types/auth.module.type";
+import { IAuthServcie } from "../../types/auth.module.type";
 import { IUser } from "../../types/user.module.type";
 import { AppError } from "../../core/errors/app.error";
 import { responseHandler } from "../../core/handlers/response.handler";
 import { HttpStatusCode } from "../../core/http/http.status.code";
 
-export class AuthServices implements IAuthServcies {
+export class AuthService implements IAuthServcie {
   constructor() {}
 
   // ============================ register ============================

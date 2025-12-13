@@ -1,5 +1,6 @@
 import Stripe from "stripe";
-import { ApplicationException } from "../Errors";
+import { AppError } from "../../core/errors/app.error";
+import { HttpStatusCode } from "../../core/http/http.status.code";
 
 let stripe: Stripe | null = null;
 
@@ -13,8 +14,7 @@ function getStripeInstance(): Stripe {
   }
   return stripe;
 }
-
-// createCheckoutSession
+// ============================ createCheckoutSession ============================
 export async function createCheckoutSession({
   success_url = process.env.SUCCESS_URL as string,
   cancel_url = process.env.CANCEL_URL as string,
@@ -37,25 +37,26 @@ export async function createCheckoutSession({
   return session;
 }
 
-// createCoupon
+// ============================ createCoupon ============================
 export async function createCoupon(data: Stripe.CouponCreateParams) {
   const stripeInstance = getStripeInstance();
   const coupon = await stripeInstance.coupons.create(data);
   return coupon;
 }
 
-// createRefund
+// ============================ createRefund ============================
 export async function createRefund(id: string) {
   const stripeInstance = getStripeInstance();
   const paymentIntent = await retrievePaymentIntent(id);
-  if (!paymentIntent) throw new ApplicationException("Invalid paymentIntent id", 404);
+  if (!paymentIntent)
+    throw new AppError(HttpStatusCode.NOT_FOUND, "Invalid paymentIntent id");
   const refund = await stripeInstance.refunds.create({
     payment_intent: id,
   });
   return refund;
 }
 
-// retrievePaymentIntent
+// ============================ retrievePaymentIntent ============================
 export async function retrievePaymentIntent(id: string) {
   const stripeInstance = getStripeInstance();
   const paymentIntent = await stripeInstance.paymentIntents.retrieve(id);

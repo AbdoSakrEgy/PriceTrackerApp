@@ -1,9 +1,9 @@
 import { NextFunction, Request, Response } from "express";
-import { IError } from "./../../utils/Errors";
 import { errorHandler } from "../handlers/error.handler";
+import { AppError } from "../errors/app.error";
 
 export const errorMiddleware = (
-  err: IError,
+  err: AppError,
   req: Request,
   res: Response,
   next: NextFunction

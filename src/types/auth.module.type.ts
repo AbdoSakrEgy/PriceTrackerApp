@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 
-export interface IAuthServcies {
+export interface IAuthServcie {
   register(req: Request, res: Response, next: NextFunction): Promise<Response>;
   login(req: Request, res: Response, next: NextFunction): Promise<Response>;
   refreshToken(

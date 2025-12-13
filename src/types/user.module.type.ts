@@ -46,7 +46,7 @@ export interface IUser {
   avaliableCredits: number;
 }
 
-export interface IUserServices {
+export interface IUserService {
   userProfile(
     req: Request,
     res: Response,
@@ -57,7 +57,33 @@ export interface IUserServices {
     res: Response,
     next: NextFunction
   ): Promise<Response>;
-  deleteProfileImage(
+  uploadProfileVideo(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response>;
+  uploadAvatarImage(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response>;
+  uploadCoverImages(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response>;
+  getFile(req: Request, res: Response, next: NextFunction): Promise<void>;
+  createPresignedUrlToGetFile(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response>;
+  deleteFile(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response>;
+  deleteMultiFiles(
     req: Request,
     res: Response,
     next: NextFunction

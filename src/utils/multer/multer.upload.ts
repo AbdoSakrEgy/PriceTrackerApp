@@ -1,28 +1,21 @@
 import multer from "multer";
-import { ApplicationException } from "../Errors";
 import { Request } from "express";
 import fs from "fs";
-
-export enum StoreInEnum {
-  disk = "disk",
-  memory = "memory",
-}
-export const fileTypes = {
-  image: ["image/jpg", "image/jpeg", "image/png", "image/gif", "image/webp"],
-  video: ["video/mp4", "video/webm"],
-};
+import { AppError } from "../../core/errors/app.error";
+import { HttpStatusCode } from "../../core/http/http.status.code";
+import { FileType, StoreInEnum } from "../../types/multer.type";
 
 export const multerUpload = ({
   sendedFileDest = "general",
-  sendedFileType = fileTypes.image,
-  storeIn = StoreInEnum.memory,
+  sendedFileType = FileType.image,
+  storeIn = StoreInEnum.DISK,
 }: {
   sendedFileDest?: string;
   sendedFileType?: string[];
   storeIn?: StoreInEnum;
 }): multer.Multer => {
   const storage =
-    storeIn == StoreInEnum.memory
+    storeIn == StoreInEnum.MEMORY
       ? multer.memoryStorage()
       : multer.diskStorage({
           // destination: (req: any, file, cb) => {
@@ -42,10 +35,16 @@ export const multerUpload = ({
     file: Express.Multer.File,
     cb: CallableFunction
   ) => {
-    if (file.size > 200 * 1024 * 1024 && storeIn == StoreInEnum.memory) {
-      return cb(new ApplicationException("Use disk not memory", 400), false);
+    if (file.size > 200 * 1024 * 1024 && storeIn == StoreInEnum.MEMORY) {
+      return cb(
+        new AppError(HttpStatusCode.BAD_REQUEST, "Use disk not memory"),
+        false
+      );
     } else if (!sendedFileType.includes(file.mimetype)) {
-      return cb(new ApplicationException("Invalid file format", 400), false);
+      return cb(
+        new AppError(HttpStatusCode.BAD_REQUEST, "Invalid file format"),
+        false
+      );
     }
     cb(null, true);
   };

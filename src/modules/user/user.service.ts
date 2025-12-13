@@ -1,23 +1,40 @@
-import { UserModel } from "./user.model";
-import { responseHandler } from "../../core/handlers/response.handler";
 import { NextFunction, Request, Response } from "express";
-import { IUserServices, PricingPlanEnum } from "../../types/user.module.type";
 import {
-  destroySingleFile,
-  uploadSingleFile,
-} from "../../utils/cloudinary/cloudinary.service";
-import Stripe from "stripe";
+  deleteMultiFilesDTO,
+  createPresignedUrlToGetFileDTO,
+  updateBasicInfoDTO,
+  uploadAvatarImageDTO,
+} from "./user.dto";
 import {
-  createCheckoutSession,
-  createCoupon,
-} from "../../utils/stripe/stripe.service";
+  createPreSignedUrlToUploadFileS3,
+  uploadMultiFilesS3,
+  uploadSingleSmallFileS3,
+  uploadSingleLargeFileS3,
+  getFileS3,
+  createPresignedUrlToGetFileS3,
+  deleteFileS3,
+  deleteMultiFilesS3,
+} from "../../utils/S3-AWS/S3.services";
+import { HydratedDocument } from "mongoose";
+import { StoreInEnum } from "../../types/multer.type";
+import { promisify } from "util";
+import { pipeline } from "stream";
+import { IUser, IUserService } from "../../types/user.module.type";
 import { AppError } from "../../core/errors/app.error";
 import { HttpStatusCode } from "../../core/http/http.status.code";
+import { UserModel } from "./user.model";
+import { responseHandler } from "../../core/handlers/response.handler";
+import {
+  uploadCoverImagesSchema,
+  uploadProfileImageSchema,
+  uploadProfileVideoSchema,
+} from "./user.validation";
 
-export class UserServices implements IUserServices {
-  private userModel = UserModel;
+const createS3WriteStreamPipe = promisify(pipeline);
 
+export class UserService implements IUserService {
   constructor() {}
+
   // ============================ userProfile ============================
   userProfile = async (
     req: Request,
@@ -25,15 +42,12 @@ export class UserServices implements IUserServices {
     next: NextFunction
   ): Promise<Response> => {
     let user = res.locals.user;
-    const userId = req.params?.userId;
-    // step: if userId existence load that user
+    let userId = req.params?.userId;
+    // step: if userId existence
     if (userId) {
-      const foundUser = await this.userModel.findById(userId);
-      if (!foundUser) {
-        throw new AppError(HttpStatusCode.NOT_FOUND, "User not found");
-      }
-      user = foundUser;
+      user = await UserModel.findOne({ _id: userId });
     }
+    userId = user._id;
     return responseHandler({ res, data: { user } });
   };
 
@@ -43,59 +57,208 @@ export class UserServices implements IUserServices {
     res: Response,
     next: NextFunction
   ): Promise<Response> => {
-    const user = res.locals.user;
-    const file = req.file;
-
-    if (!file) {
-      throw new AppError(
-        HttpStatusCode.BAD_REQUEST,
-        "profileImage is required"
-      );
-    }
-
-    const uploadResult = await uploadSingleFile({
-      fileLocation: (file as any).path,
-      storagePathOnCloudinary: `users/${user._id}/profile`,
+    const user = res.locals.user as HydratedDocument<IUser>;
+    // step: validate multipart/form-data req
+    const parsed = uploadProfileImageSchema.safeParse({
+      ...req.body,
+      profileImage: req.file,
     });
-
-    const updatedUser = await this.userModel.findOneAndUpdate(
+    if (!parsed.success) {
+      const errors = parsed.error.issues
+        .map((e) => `${e.path.join(".")}: ${e.message}`)
+        .join("; ");
+      throw new AppError(HttpStatusCode.BAD_REQUEST, errors);
+    }
+    // step: upload image
+    const Key = await uploadSingleSmallFileS3({
+      dest: `users/${user._id}/profileImage`,
+      fileFromMulter: req.file as Express.Multer.File,
+    });
+    // step: update user
+    const updatedUser = await UserModel.findOneAndUpdate(
       { _id: user._id },
-      { $set: { profileImage: uploadResult } },
-      { new: true }
+      { $set: { profileImage: Key } }
     );
-
     return responseHandler({
       res,
-      message: "Profile image updated successfully",
-      data: { user: updatedUser },
+      message: "Profile image uploaded successfully",
+      data: { Key },
     });
   };
 
-  // ============================ deleteProfileImage ============================
-  deleteProfileImage = async (
+  // ============================ uploadProfileVideo ============================
+  uploadProfileVideo = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response> => {
+    const user = res.locals.user as HydratedDocument<IUser>;
+    // step: validate multipart/form-data req
+    const parsed = uploadProfileVideoSchema.safeParse({
+      ...req.body,
+      profileVideo: req.file,
+    });
+    if (!parsed.success) {
+      const errors = parsed.error.issues
+        .map((e) => `${e.path.join(".")}: ${e.message}`)
+        .join("; ");
+      throw new AppError(HttpStatusCode.BAD_REQUEST, errors);
+    }
+    // step: upload video
+    const Key = await uploadSingleLargeFileS3({
+      dest: `users/${user._id}/profileVideo`,
+      fileFromMulter: req.file as Express.Multer.File,
+      storeIn: StoreInEnum.DISK,
+    });
+    // step: update user
+    const updatedUser = await UserModel.findOneAndUpdate(
+      { _id: user._id },
+      { $set: { profileVideo: Key } }
+    );
+    return responseHandler({
+      res,
+      message: "Profile video uploaded successfully",
+      data: { Key },
+    });
+  };
+
+  // ============================ uploadAvatarImage ============================
+  uploadAvatarImage = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response> => {
+    const user = res.locals.user as HydratedDocument<IUser>;
+    const { fileName, fileType }: uploadAvatarImageDTO = req.body;
+    // step: upload image
+    const { url, Key } = await createPreSignedUrlToUploadFileS3({
+      dest: `users/${user._id}/avatarImage`,
+      fileName,
+      ContentType: fileType,
+    });
+    // step: update user
+    const updatedUser = await UserModel.findOneAndUpdate(
+      { _id: user._id },
+      { $set: { avatarImage: Key } }
+    );
+    return responseHandler({
+      res,
+      message:
+        "Use url to upload your image by using it as API with PUT method",
+      data: { url, Key },
+    });
+  };
+
+  // ============================ uploadCoverImages ============================
+  uploadCoverImages = async (
     req: Request,
     res: Response,
     next: NextFunction
   ): Promise<Response> => {
     const user = res.locals.user;
-
-    const currentUser = await this.userModel.findById(user._id);
-    if (currentUser?.profileImage?.public_id) {
-      await destroySingleFile({
-        public_id: currentUser.profileImage.public_id,
-      });
+    // step: validate multipart/form-data req
+    const parsed = uploadCoverImagesSchema.safeParse({
+      ...req.body,
+      coverImages: req.files,
+    });
+    if (!parsed.success) {
+      const errors = parsed.error.issues
+        .map((e) => `${e.path.join(".")}: ${e.message}`)
+        .join("; ");
+      throw new AppError(HttpStatusCode.BAD_REQUEST, errors);
     }
-
-    const updatedUser = await this.userModel.findOneAndUpdate(
+    // step: upload images
+    const Keys = await uploadMultiFilesS3({
+      filesFromMulter: req.files as Express.Multer.File[],
+      dest: `users/${user._id}/coverImages`,
+    });
+    // step: update user
+    const updatedUser = await UserModel.findOneAndUpdate(
       { _id: user._id },
-      { $unset: { profileImage: "" } },
-      { new: true }
+      { $set: { coverImages: Keys } }
     );
-
     return responseHandler({
       res,
-      message: "Profile image deleted successfully",
-      data: { user: updatedUser },
+      message: "Cover images uploaded successfully",
+      data: { Keys },
+    });
+  };
+
+  // ============================ getFile ============================
+  getFile = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    const { downloadName } = req.query;
+    const path = req.params.path as unknown as string[];
+    const Key = path.join("/");
+    const fileObject = await getFileS3({ Key });
+    if (!fileObject?.Body) {
+      throw new AppError(HttpStatusCode.BAD_REQUEST, "Failed to get file");
+    }
+    res.setHeader(
+      "Content-Type",
+      `${fileObject.ContentType}` || "application/octet-stream"
+    );
+    if (downloadName) {
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename=${downloadName}`
+      );
+    }
+    return await createS3WriteStreamPipe(
+      fileObject.Body as NodeJS.ReadableStream,
+      res
+    );
+  };
+
+  // ============================ createPresignedUrlToGetFile ============================
+  createPresignedUrlToGetFile = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    const {
+      download = false,
+      downloadName = "dumy",
+    }: createPresignedUrlToGetFileDTO = req.body;
+    const path = req.params.path as unknown as string[];
+    const Key = path.join("/");
+    const url = await createPresignedUrlToGetFileS3({
+      Key,
+      download,
+      downloadName,
+    });
+    return responseHandler({
+      res,
+      message: "Use this URL to get file",
+      data: { url },
+    });
+  };
+
+  // ============================ deleteFile ============================
+  deleteFile = async (req: Request, res: Response, next: NextFunction) => {
+    const path = req.params.path as unknown as string[];
+    const Key = path.join("/");
+    const result = await deleteFileS3({ Key });
+    return responseHandler({
+      res,
+      message: "File deleted successfully",
+    });
+  };
+
+  // ============================ deleteMultiFiles ============================
+  deleteMultiFiles = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ) => {
+    const { Keys, Quiet = false }: deleteMultiFilesDTO = req.body;
+    const result = await deleteMultiFilesS3({ Keys, Quiet });
+    return responseHandler({
+      res,
+      message: "Files deleted successfully",
     });
   };
 
@@ -106,117 +269,20 @@ export class UserServices implements IUserServices {
     next: NextFunction
   ): Promise<Response> => {
     const user = res.locals.user;
-    const { firstName, lastName, age, gender, phone } = req.body;
-    const updatedUser = await this.userModel.findOneAndUpdate(
-      { _id: user._id },
-      {
-        $set: {
-          ...(firstName && { firstName }),
-          ...(lastName && { lastName }),
-          ...(age !== undefined && { age }),
-          ...(gender && { gender }),
-          ...(phone && { phone }),
-        },
-      },
-      {
-        new: true,
-        runValidators: true,
-        context: "query",
-      }
-    );
-
-    return responseHandler({
-      res,
-      message: "Basic info updated successfully",
-      data: { user: updatedUser },
+    const { firstName, lastName, age, gender, phone }: updateBasicInfoDTO =
+      req.body;
+    // step: update basic info
+    const updatedUser = await UserModel.findOneAndUpdate({
+      filter: { _id: user._id },
+      data: { $set: { firstName, lastName, age, gender, phone } },
     });
-  };
-
-  // ============================ payWithStripe ============================
-  payWithStripe = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<Response> => {
-    const user = res.locals.user;
-    const { plan, userCoupon } = req.body;
-    // step: check coupon validation
-    let checkCoupon = undefined;
-    if (userCoupon) {
-      const allowedCoupons = [
-        { code: "ADF-DFA-31-DA", offer: 15 },
-        { code: "JMY-GHR-65-CS", offer: 30 },
-      ];
-      checkCoupon = allowedCoupons.filter((item) => item.code == userCoupon)[0];
-      if (!checkCoupon) {
-        throw new AppError(HttpStatusCode.BAD_REQUEST, "Invalid coupon");
-      }
-    }
-    // step: calculate plan price
-    let costAmount = 0;
-    if (plan == PricingPlanEnum.BASIC) {
-      costAmount = 50;
-    }
-    if (plan == PricingPlanEnum.PRO) {
-      costAmount = 100;
-    }
-    // step: collect createCheckoutSession data
-    const line_items = [
-      {
-        price_data: {
-          currency: "egp",
-          product_data: {
-            name: `${user.firstName} will subscripe to ${plan} plan`,
-            description: "plan description",
-          },
-          unit_amount: costAmount * 100,
-        },
-        quantity: 1,
-      },
-    ];
-    const discounts: Stripe.Checkout.SessionCreateParams.Discount[] = [];
-    if (checkCoupon) {
-      const coupon = await createCoupon({
-        duration: "once",
-        currency: "egp",
-        percent_off: checkCoupon.offer,
+    if (!updatedUser) {
+      return responseHandler({
+        res,
+        message: "Error while update user",
+        status: 500,
       });
-      discounts.push({ coupon: coupon.id });
     }
-    // step: apply stripe services
-    // createCheckoutSession
-    const checkoutSession = await createCheckoutSession({
-      customer_email: user.email,
-      line_items,
-      mode: "payment",
-      discounts,
-      metadata: { userId: user._id.toString(), plan },
-    });
-    // Store the checkout session ID for reference
-    user.checkoutSessionId = checkoutSession.id;
-    await user.save();
-    return responseHandler({ res, data: { checkoutSession } });
-  };
-
-  // ============================ webHookWithStripe ============================
-  webHookWithStripe = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<Response> => {
-    const { userId, plan } = req.body.data.object.metadata;
-    // step: check order existence
-    const user = await UserModel.findOneAndUpdate(
-      { _id: userId },
-      {
-        $set: {
-          paymentIntentId: req.body.data.object.payment_intent,
-          pricingPlan: plan,
-          avaliableCredits: 200,
-        },
-      }
-    );
-    if (!user) throw new AppError(HttpStatusCode.NOT_FOUND, "User not found");
-    return responseHandler({ res, message: "webHookWithStripe done" });
+    return responseHandler({ res, message: "User updated successfully" });
   };
 }

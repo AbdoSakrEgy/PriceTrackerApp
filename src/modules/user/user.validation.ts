@@ -36,34 +36,3 @@ export const updateBasicInfoSchema = z.object({
   gender: z.literal([GenderEnum.MALE, GenderEnum.FEMALE]).optional(),
   phone: z.string().optional(),
 });
-
-export const sendFriendRequestSchema = z.object({
-  to: z
-    .string()
-    .refine((val) => mongoose.Types.ObjectId.isValid(val), {
-      message: "Invalid ObjectId",
-    })
-    .transform((val) => new mongoose.Types.ObjectId(val)),
-});
-
-export const acceptFriendRequestSchema = z.object({
-  friendRequestId: z
-    .string()
-    .refine((val) => mongoose.Types.ObjectId.isValid(val), {
-      message: "Invalid ObjectId",
-    })
-    .transform((val) => new mongoose.Types.ObjectId(val)),
-});
-
-export const blockUserSchema = z.object({
-  blockedUser: z.string(),
-});
-
-export const deleteFriendRequestSchema = z.object({
-  friendRequestId: z.string(),
-});
-
-export const payWithStripeSchema = z.object({
-  plan: z.enum(Object.values(PricingPlanEnum)),
-  userCoupon: z.string().optional(),
-});

@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { ZodObject } from "zod";
-import { ValidationError } from "../../utils/Errors";
+import { HttpStatusCode } from "../http/http.status.code";
+import { AppError } from "../errors/app.error";
 
 export const validation = (shcema: ZodObject) => {
   return (req: Request, res: Response, next: NextFunction) => {
@@ -20,7 +21,7 @@ export const validation = (shcema: ZodObject) => {
       for (let item of issues) {
         messages += item.message + " ||&&|| ";
       }
-      throw new ValidationError(messages, 400);
+      throw new AppError(HttpStatusCode.BAD_REQUEST, messages);
     }
     next();
   };

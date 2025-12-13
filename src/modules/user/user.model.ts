@@ -1,7 +1,6 @@
 import mongoose, { HydratedDocument, model, Schema, Types } from "mongoose";
 import { hash } from "../../utils/bcrypt";
 import { decrypt, encrypt } from "../../utils/crypto";
-import { ApplicationException } from "../../utils/Errors";
 import {
   GenderEnum,
   IUser,

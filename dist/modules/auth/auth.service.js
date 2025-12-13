@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.AuthServices = void 0;
+exports.AuthService = void 0;
 const user_model_1 = require("./../user/user.model");
 const generateHTML_1 = require("../../utils/sendEmail/generateHTML");
 const jwt_1 = require("../../utils/jwt");
@@ -11,7 +11,7 @@ const decodeToken_1 = require("../../utils/decodeToken");
 const app_error_1 = require("../../core/errors/app.error");
 const response_handler_1 = require("../../core/handlers/response.handler");
 const http_status_code_1 = require("../../core/http/http.status.code");
-class AuthServices {
+class AuthService {
     constructor() { }
     // ============================ register ============================
     register = async (req, res, next) => {
@@ -502,4 +502,4 @@ class AuthServices {
         });
     };
 }
-exports.AuthServices = AuthServices;
+exports.AuthService = AuthService;
