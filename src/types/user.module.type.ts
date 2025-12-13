@@ -72,12 +72,7 @@ export interface IUserService {
     res: Response,
     next: NextFunction
   ): Promise<Response>;
-  getFile(req: Request, res: Response, next: NextFunction): Promise<void>;
-  createPresignedUrlToGetFile(
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<Response>;
+  getFile(req: Request, res: Response, next: NextFunction): Promise<Response>;
   deleteFile(
     req: Request,
     res: Response,

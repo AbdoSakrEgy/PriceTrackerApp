@@ -126,32 +126,12 @@ class UserService {
     };
     // ============================ getFile ============================
     getFile = async (req, res, next) => {
-        const { downloadName } = req.query;
         const path = req.params.path;
         const Key = path.join("/");
-        const fileObject = await (0, S3_services_1.getFileS3)({ Key });
-        if (!fileObject?.Body) {
-            throw new app_error_1.AppError(http_status_code_1.HttpStatusCode.BAD_REQUEST, "Failed to get file");
-        }
-        res.setHeader("Content-Type", `${fileObject.ContentType}` || "application/octet-stream");
-        if (downloadName) {
-            res.setHeader("Content-Disposition", `attachment; filename=${downloadName}`);
-        }
-        return await createS3WriteStreamPipe(fileObject.Body, res);
-    };
-    // ============================ createPresignedUrlToGetFile ============================
-    createPresignedUrlToGetFile = async (req, res, next) => {
-        const { download = false, downloadName = "dumy", } = req.body;
-        const path = req.params.path;
-        const Key = path.join("/");
-        const url = await (0, S3_services_1.createPresignedUrlToGetFileS3)({
-            Key,
-            download,
-            downloadName,
-        });
+        const url = await (0, S3_services_1.createPresignedUrlToGetFileS3)({ Key });
         return (0, response_handler_1.responseHandler)({
             res,
-            message: "Use this URL to get file",
+            message: "File URL generated successfully",
             data: { url },
         });
     };
@@ -179,10 +159,7 @@ class UserService {
         const user = res.locals.user;
         const { firstName, lastName, age, gender, phone } = req.body;
         // step: update basic info
-        const updatedUser = await user_model_1.UserModel.findOneAndUpdate({
-            filter: { _id: user._id },
-            data: { $set: { firstName, lastName, age, gender, phone } },
-        });
+        const updatedUser = await user_model_1.UserModel.findOneAndUpdate({ _id: user._id }, { $set: { firstName, lastName, age, gender, phone } }, { new: true });
         if (!updatedUser) {
             return (0, response_handler_1.responseHandler)({
                 res,
@@ -190,7 +167,11 @@ class UserService {
                 status: 500,
             });
         }
-        return (0, response_handler_1.responseHandler)({ res, message: "User updated successfully" });
+        return (0, response_handler_1.responseHandler)({
+            res,
+            message: "User updated successfully",
+            data: { user: updatedUser },
+        });
     };
 }
 exports.UserService = UserService;

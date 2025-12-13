@@ -4,6 +4,7 @@ import {
   DeleteObjectsCommand,
   GetObjectCommand,
   GetObjectCommandOutput,
+  HeadObjectCommand,
   ObjectCannedACL,
   PutObjectCommand,
 } from "@aws-sdk/client-s3";
@@ -30,24 +31,36 @@ export const uploadSingleSmallFileS3 = async ({
   fileFromMulter: Express.Multer.File;
   storeIn?: StoreInEnum;
 }): Promise<string> => {
-  const command = new PutObjectCommand({
-    Bucket,
-    ACL,
-    Key: `PriceTrackerApp/${dest}/${fileFromMulter.originalname}__${randomUUID()}`,
-    Body:
-      storeIn == StoreInEnum.MEMORY
-        ? fileFromMulter.buffer
-        : createReadStream(fileFromMulter.path),
-    ContentType: fileFromMulter.mimetype,
-  });
-  await S3Config().send(command);
-  if (!command.input.Key) {
-    throw new AppError(
-      HttpStatusCode.INTERNAL_SERVER_ERROR,
-      "Error while uploading file"
-    );
+  const Key = `PriceTrackerApp/${dest}/${
+    fileFromMulter.originalname
+  }__${randomUUID()}`;
+
+  // Use PutObjectCommand for buffers (known length), Upload for streams (unknown length)
+  if (storeIn === StoreInEnum.MEMORY) {
+    const command = new PutObjectCommand({
+      Bucket,
+      ACL,
+      Key,
+      Body: fileFromMulter.buffer,
+      ContentType: fileFromMulter.mimetype,
+    });
+    await S3Config().send(command);
+  } else {
+    // Use Upload for streams to avoid "unknown length" warning
+    const upload = new Upload({
+      client: S3Config(),
+      params: {
+        Bucket,
+        ACL,
+        Key,
+        Body: createReadStream(fileFromMulter.path),
+        ContentType: fileFromMulter.mimetype,
+      },
+    });
+    await upload.done();
   }
-  return command.input.Key;
+
+  return Key;
 };
 
 // ============================ uploadSingleLargeFileS3 ============================
@@ -177,6 +190,16 @@ export const deleteFileS3 = async ({
   Bucket?: string;
   Key?: string;
 }): Promise<DeleteObjectCommandOutput> => {
+  // Check if file exists first
+  try {
+    await S3Config().send(new HeadObjectCommand({ Bucket, Key }));
+  } catch (error: any) {
+    if (error.name === "NotFound" || error.$metadata?.httpStatusCode === 404) {
+      throw new AppError(HttpStatusCode.NOT_FOUND, "File not found");
+    }
+    throw error;
+  }
+
   const command = new DeleteObjectCommand({ Bucket, Key });
   const result = await S3Config().send(command);
   return result;
@@ -192,6 +215,31 @@ export const deleteMultiFilesS3 = async ({
   Keys?: string[];
   Quiet?: boolean | undefined;
 }): Promise<DeleteObjectCommandOutput> => {
+  // Check if all files exist first
+  if (Keys && Keys.length > 0) {
+    const notFoundKeys: string[] = [];
+    for (const Key of Keys) {
+      try {
+        await S3Config().send(new HeadObjectCommand({ Bucket, Key }));
+      } catch (error: any) {
+        if (
+          error.name === "NotFound" ||
+          error.$metadata?.httpStatusCode === 404
+        ) {
+          notFoundKeys.push(Key);
+        } else {
+          throw error;
+        }
+      }
+    }
+    if (notFoundKeys.length > 0) {
+      throw new AppError(
+        HttpStatusCode.NOT_FOUND,
+        `Files not found: ${notFoundKeys.join(", ")}`
+      );
+    }
+  }
+
   const Objects = Keys?.map((Key) => {
     return { Key };
   });
@@ -253,6 +301,16 @@ export const createPresignedUrlToGetFileS3 = async ({
   download?: boolean;
   expiresIn?: number;
 }): Promise<string> => {
+  // Check if file exists first
+  try {
+    await S3Config().send(new HeadObjectCommand({ Bucket, Key }));
+  } catch (error: any) {
+    if (error.name === "NotFound" || error.$metadata?.httpStatusCode === 404) {
+      throw new AppError(HttpStatusCode.NOT_FOUND, "File not found");
+    }
+    throw error;
+  }
+
   const command = new GetObjectCommand({
     Bucket,
     Key,

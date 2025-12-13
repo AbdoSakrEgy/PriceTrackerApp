@@ -189,50 +189,13 @@ export class UserService implements IUserService {
     req: Request,
     res: Response,
     next: NextFunction
-  ): Promise<void> => {
-    const { downloadName } = req.query;
+  ): Promise<Response> => {
     const path = req.params.path as unknown as string[];
     const Key = path.join("/");
-    const fileObject = await getFileS3({ Key });
-    if (!fileObject?.Body) {
-      throw new AppError(HttpStatusCode.BAD_REQUEST, "Failed to get file");
-    }
-    res.setHeader(
-      "Content-Type",
-      `${fileObject.ContentType}` || "application/octet-stream"
-    );
-    if (downloadName) {
-      res.setHeader(
-        "Content-Disposition",
-        `attachment; filename=${downloadName}`
-      );
-    }
-    return await createS3WriteStreamPipe(
-      fileObject.Body as NodeJS.ReadableStream,
-      res
-    );
-  };
-
-  // ============================ createPresignedUrlToGetFile ============================
-  createPresignedUrlToGetFile = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ) => {
-    const {
-      download = false,
-      downloadName = "dumy",
-    }: createPresignedUrlToGetFileDTO = req.body;
-    const path = req.params.path as unknown as string[];
-    const Key = path.join("/");
-    const url = await createPresignedUrlToGetFileS3({
-      Key,
-      download,
-      downloadName,
-    });
+    const url = await createPresignedUrlToGetFileS3({ Key });
     return responseHandler({
       res,
-      message: "Use this URL to get file",
+      message: "File URL generated successfully",
       data: { url },
     });
   };
@@ -272,10 +235,11 @@ export class UserService implements IUserService {
     const { firstName, lastName, age, gender, phone }: updateBasicInfoDTO =
       req.body;
     // step: update basic info
-    const updatedUser = await UserModel.findOneAndUpdate({
-      filter: { _id: user._id },
-      data: { $set: { firstName, lastName, age, gender, phone } },
-    });
+    const updatedUser = await UserModel.findOneAndUpdate(
+      { _id: user._id },
+      { $set: { firstName, lastName, age, gender, phone } },
+      { new: true }
+    );
     if (!updatedUser) {
       return responseHandler({
         res,
@@ -283,6 +247,10 @@ export class UserService implements IUserService {
         status: 500,
       });
     }
-    return responseHandler({ res, message: "User updated successfully" });
+    return responseHandler({
+      res,
+      message: "User updated successfully",
+      data: { user: updatedUser },
+    });
   };
 }

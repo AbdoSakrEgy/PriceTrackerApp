@@ -12,20 +12,33 @@ const crypto_1 = require("crypto");
 const http_status_code_1 = require("./../../core/http/http.status.code");
 // ============================ uploadSingleSmallFileS3 ============================
 const uploadSingleSmallFileS3 = async ({ Bucket = process.env.BUCKET_NAME, ACL = "private", dest = "general", fileFromMulter, storeIn = multer_type_1.StoreInEnum.MEMORY, }) => {
-    const command = new client_s3_1.PutObjectCommand({
-        Bucket,
-        ACL,
-        Key: `PriceTrackerApp/${dest}/${fileFromMulter.originalname}__${(0, crypto_1.randomUUID)()}`,
-        Body: storeIn == multer_type_1.StoreInEnum.MEMORY
-            ? fileFromMulter.buffer
-            : (0, fs_1.createReadStream)(fileFromMulter.path),
-        ContentType: fileFromMulter.mimetype,
-    });
-    await (0, S3_config_1.S3Config)().send(command);
-    if (!command.input.Key) {
-        throw new app_error_1.AppError(http_status_code_1.HttpStatusCode.INTERNAL_SERVER_ERROR, "Error while uploading file");
+    const Key = `PriceTrackerApp/${dest}/${fileFromMulter.originalname}__${(0, crypto_1.randomUUID)()}`;
+    // Use PutObjectCommand for buffers (known length), Upload for streams (unknown length)
+    if (storeIn === multer_type_1.StoreInEnum.MEMORY) {
+        const command = new client_s3_1.PutObjectCommand({
+            Bucket,
+            ACL,
+            Key,
+            Body: fileFromMulter.buffer,
+            ContentType: fileFromMulter.mimetype,
+        });
+        await (0, S3_config_1.S3Config)().send(command);
     }
-    return command.input.Key;
+    else {
+        // Use Upload for streams to avoid "unknown length" warning
+        const upload = new lib_storage_1.Upload({
+            client: (0, S3_config_1.S3Config)(),
+            params: {
+                Bucket,
+                ACL,
+                Key,
+                Body: (0, fs_1.createReadStream)(fileFromMulter.path),
+                ContentType: fileFromMulter.mimetype,
+            },
+        });
+        await upload.done();
+    }
+    return Key;
 };
 exports.uploadSingleSmallFileS3 = uploadSingleSmallFileS3;
 // ============================ uploadSingleLargeFileS3 ============================
@@ -112,6 +125,16 @@ const getFileS3 = async ({ Bucket = process.env.BUCKET_NAME, Key, }) => {
 exports.getFileS3 = getFileS3;
 // ============================ deleteFileS3 ============================
 const deleteFileS3 = async ({ Bucket = process.env.BUCKET_NAME, Key, }) => {
+    // Check if file exists first
+    try {
+        await (0, S3_config_1.S3Config)().send(new client_s3_1.HeadObjectCommand({ Bucket, Key }));
+    }
+    catch (error) {
+        if (error.name === "NotFound" || error.$metadata?.httpStatusCode === 404) {
+            throw new app_error_1.AppError(http_status_code_1.HttpStatusCode.NOT_FOUND, "File not found");
+        }
+        throw error;
+    }
     const command = new client_s3_1.DeleteObjectCommand({ Bucket, Key });
     const result = await (0, S3_config_1.S3Config)().send(command);
     return result;
@@ -120,6 +143,27 @@ exports.deleteFileS3 = deleteFileS3;
 // ============================ deleteMultiFilesS3 ============================
 const deleteMultiFilesS3 = async ({ Bucket = process.env.BUCKET_NAME, Keys, Quiet = false, // false => returns Deleted[] and Errors[] true => returns only Errors[]
  }) => {
+    // Check if all files exist first
+    if (Keys && Keys.length > 0) {
+        const notFoundKeys = [];
+        for (const Key of Keys) {
+            try {
+                await (0, S3_config_1.S3Config)().send(new client_s3_1.HeadObjectCommand({ Bucket, Key }));
+            }
+            catch (error) {
+                if (error.name === "NotFound" ||
+                    error.$metadata?.httpStatusCode === 404) {
+                    notFoundKeys.push(Key);
+                }
+                else {
+                    throw error;
+                }
+            }
+        }
+        if (notFoundKeys.length > 0) {
+            throw new app_error_1.AppError(http_status_code_1.HttpStatusCode.NOT_FOUND, `Files not found: ${notFoundKeys.join(", ")}`);
+        }
+    }
     const Objects = Keys?.map((Key) => {
         return { Key };
     });
@@ -151,6 +195,16 @@ const createPreSignedUrlToUploadFileS3 = async ({ Bucket = process.env.BUCKET_NA
 exports.createPreSignedUrlToUploadFileS3 = createPreSignedUrlToUploadFileS3;
 // ============================ createPresignedUrlToGetFileS3 ============================
 const createPresignedUrlToGetFileS3 = async ({ Bucket = process.env.BUCKET_NAME, Key, downloadName = "dumy", download = false, expiresIn = 5 * 60, }) => {
+    // Check if file exists first
+    try {
+        await (0, S3_config_1.S3Config)().send(new client_s3_1.HeadObjectCommand({ Bucket, Key }));
+    }
+    catch (error) {
+        if (error.name === "NotFound" || error.$metadata?.httpStatusCode === 404) {
+            throw new app_error_1.AppError(http_status_code_1.HttpStatusCode.NOT_FOUND, "File not found");
+        }
+        throw error;
+    }
     const command = new client_s3_1.GetObjectCommand({
         Bucket,
         Key,
