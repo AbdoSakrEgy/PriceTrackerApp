@@ -1,7 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import {
   deleteMultiFilesDTO,
-  createPresignedUrlToGetFileDTO,
   updateBasicInfoDTO,
   uploadAvatarImageDTO,
 } from "./user.dto";
@@ -16,10 +15,10 @@ import {
   deleteMultiFilesS3,
 } from "../../utils/S3-AWS/S3.services";
 import { HydratedDocument } from "mongoose";
-import { StoreInEnum } from "../../types/multer.type";
+import { StoreInEnum } from "../../types/global.types";
 import { promisify } from "util";
 import { pipeline } from "stream";
-import { IUser, IUserService } from "../../types/user.module.type";
+import { IUser, IUserService } from "../../types/global.interfaces";
 import { AppError } from "../../core/errors/app.error";
 import { HttpStatusCode } from "../../core/http/http.status.code";
 import { UserModel } from "./user.model";
@@ -29,8 +28,6 @@ import {
   uploadProfileImageSchema,
   uploadProfileVideoSchema,
 } from "./user.validation";
-
-const createS3WriteStreamPipe = promisify(pipeline);
 
 export class UserService implements IUserService {
   constructor() {}

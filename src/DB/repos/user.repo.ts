@@ -5,14 +5,14 @@ import {
   QueryOptions,
 } from "mongoose";
 import { DBRepo } from "../../DB/repos/db.repo";
-import { IUser } from "../../types/user.module.type";
+import { IUser } from "../../types/global.interfaces";
 import { UserModel } from "../../modules/user/user.model";
 
 export class UserRepo extends DBRepo<IUser> {
   constructor(protected override readonly model: Model<IUser> = UserModel) {
     super(model);
   }
-  
+
   // ============================ findByEmail ============================
   findByEmail = async ({
     email,

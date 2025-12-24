@@ -5,7 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.updateBasicInfoSchema = exports.deleteMultiFilesSchema = exports.createPresignedUrlToGetFileSchema = exports.uploadCoverImagesSchema = exports.uploadAvatarImageSchema = exports.uploadProfileVideoSchema = exports.uploadProfileImageSchema = void 0;
 const zod_1 = __importDefault(require("zod"));
-const user_module_type_1 = require("../../types/user.module.type");
+const global_types_1 = require("../../types/global.types");
 exports.uploadProfileImageSchema = zod_1.default.object({
     profileImage: zod_1.default.object(),
 });
@@ -31,6 +31,6 @@ exports.updateBasicInfoSchema = zod_1.default.object({
     firstName: zod_1.default.string().min(3).max(50).optional(),
     lastName: zod_1.default.string().min(3).max(50).optional(),
     age: zod_1.default.number().min(18).max(200).optional(),
-    gender: zod_1.default.literal([user_module_type_1.GenderEnum.MALE, user_module_type_1.GenderEnum.FEMALE]).optional(),
+    gender: zod_1.default.literal([global_types_1.GenderEnum.MALE, global_types_1.GenderEnum.FEMALE]).optional(),
     phone: zod_1.default.string().optional(),
 });

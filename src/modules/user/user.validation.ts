@@ -1,6 +1,6 @@
 import z from "zod";
 import mongoose from "mongoose";
-import { GenderEnum, PricingPlanEnum } from "../../types/user.module.type";
+import { GenderEnum, PricingPlanEnum } from "../../types/global.types";
 
 export const uploadProfileImageSchema = z.object({
   profileImage: z.object(),

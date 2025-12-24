@@ -3,10 +3,10 @@ import { hash } from "../../utils/bcrypt";
 import { decrypt, encrypt } from "../../utils/crypto";
 import {
   GenderEnum,
-  IUser,
   PricingPlanEnum,
   RoleEnum,
-} from "../../types/user.module.type";
+} from "../../types/global.types";
+import { IUser } from "../../types/global.interfaces";
 
 const userSchema = new Schema<IUser>(
   {

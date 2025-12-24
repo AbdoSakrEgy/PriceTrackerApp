@@ -2,15 +2,12 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.UserService = void 0;
 const S3_services_1 = require("../../utils/S3-AWS/S3.services");
-const multer_type_1 = require("../../types/multer.type");
-const util_1 = require("util");
-const stream_1 = require("stream");
+const global_types_1 = require("../../types/global.types");
 const app_error_1 = require("../../core/errors/app.error");
 const http_status_code_1 = require("../../core/http/http.status.code");
 const user_model_1 = require("./user.model");
 const response_handler_1 = require("../../core/handlers/response.handler");
 const user_validation_1 = require("./user.validation");
-const createS3WriteStreamPipe = (0, util_1.promisify)(stream_1.pipeline);
 class UserService {
     constructor() { }
     // ============================ userProfile ============================
@@ -69,7 +66,7 @@ class UserService {
         const Key = await (0, S3_services_1.uploadSingleLargeFileS3)({
             dest: `users/${user._id}/profileVideo`,
             fileFromMulter: req.file,
-            storeIn: multer_type_1.StoreInEnum.DISK,
+            storeIn: global_types_1.StoreInEnum.DISK,
         });
         // step: update user
         const updatedUser = await user_model_1.UserModel.findOneAndUpdate({ _id: user._id }, { $set: { profileVideo: Key } });

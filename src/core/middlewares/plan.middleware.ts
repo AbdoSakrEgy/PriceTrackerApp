@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { UserModel } from "../../modules/user/user.model";
-import { PricingPlanEnum } from "../../types/user.module.type";
+import { PricingPlanEnum } from "../../types/global.types";
 import { AppError } from "../errors/app.error";
 import { HttpStatusCode } from "../http/http.status.code";
 

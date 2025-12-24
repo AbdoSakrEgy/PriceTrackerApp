@@ -1,10 +1,10 @@
 import { NextFunction } from "express";
-import { UserModel } from "../modules/user/user.model.js";
-import { MyJwtPayload, verifyJwt } from "./jwt.js";
+import { UserModel } from "../modules/user/user.model";
+import { MyJwtPayload, verifyJwt } from "./jwt";
 import { HydratedDocument } from "mongoose";
-import { IUser } from "../types/user.module.type.js";
-import { AppError } from "../core/errors/app.error.js";
-import { HttpStatusCode } from "../core/http/http.status.code.js";
+import { IUser } from "../types/global.interfaces";
+import { AppError } from "../core/errors/app.error";
+import { HttpStatusCode } from "../core/http/http.status.code";
 
 export enum TokenTypesEnum {
   access = "access",

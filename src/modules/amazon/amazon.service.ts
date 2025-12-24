@@ -1,6 +1,6 @@
 import { responseHandler } from "../../core/handlers/response.handler";
 import { NextFunction, Request, Response } from "express";
-import { IAmazonServices } from "../../types/amazon.module.type";
+import { IAmazonServices } from "../../types/global.interfaces";
 import { AmazonModel } from "./amazon.model";
 import { amazonAIExtractor } from "../../utils/amazon/amazon.ai.extractor";
 import { addProductDTO, getProductDTO, updateProductDTO } from "./amazon.dto";

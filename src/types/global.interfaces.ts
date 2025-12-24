@@ -1,22 +1,46 @@
 import { NextFunction, Request, Response } from "express";
 import mongoose, { Types } from "mongoose";
 
-export const GenderEnum = {
-  MALE: "male",
-  FEMALE: "female",
-};
-export const RoleEnum = {
-  ADMIN: "admin",
-  USER: "user",
-};
-export const PricingPlanEnum = {
-  FREE: "free",
-  BASIC: "basic",
-  PRO: "pro",
-};
-Object.freeze(GenderEnum);
-Object.freeze(RoleEnum);
-Object.freeze(PricingPlanEnum);
+export interface IAuthServcie {
+  register(req: Request, res: Response, next: NextFunction): Promise<Response>;
+  login(req: Request, res: Response, next: NextFunction): Promise<Response>;
+  refreshToken(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response>;
+  confirmEmail(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response>;
+  updateEmail(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response>;
+  resendEmailOtp(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response>;
+  updatePassword(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response>;
+  forgetPassword(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response>;
+  changePassword(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response>;
+  logout(req: Request, res: Response, next: NextFunction): Promise<Response>;
+}
 
 export interface IUser {
   firstName: string;
@@ -84,6 +108,40 @@ export interface IUserService {
     next: NextFunction
   ): Promise<Response>;
   updateBasicInfo(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response>;
+}
+
+export interface IAmazon {
+  url: string;
+  title: string;
+  price: number;
+  originalPrice: number;
+  discount: number;
+  rating: number;
+  reviewCount: number;
+  seller: string;
+  availability: string;
+  description: string;
+  image: string;
+  category: string;
+  updateLog: object[];
+}
+
+export interface IAmazonServices {
+  addProduct(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response>;
+  updateProduct(
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<Response>;
+  getProduct(
     req: Request,
     res: Response,
     next: NextFunction
